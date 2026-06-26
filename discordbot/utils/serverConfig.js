@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 const STORAGE_PATH = './data/serverConfig.json';
-const DEFAULTS = { quality: 'high', volume: 100, defaultRegion: 'ID' };
+const DEFAULTS = { quality: 'high', volume: 100, defaultRegion: 'ID', audioSource: 'default' };
 
 export function load() {
     if (!fs.existsSync(STORAGE_PATH)) return {};
