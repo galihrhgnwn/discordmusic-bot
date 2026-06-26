@@ -18,6 +18,7 @@ import { handlePlayCommand } from './commands/play.js';
 import { handleChart } from './commands/charts.js';
 import { handlePlaylist } from './commands/playlist.js';
 import { handleDownload, handleRecommend, handleHelp, handleKeepJoin, handleQuitJoin } from './commands/misc.js';
+import { handleAudioCommand } from './commands/audio.js';
 import { connectionMap } from './core/player.js';
 import { stopPlayer } from './core/player.js';
 import { preloadAllSessions, cleanupExpiredTokens } from './core/userSessionManager.js';
@@ -100,6 +101,7 @@ registerCommand('recommend', handleRecommend);
 registerCommand('help', handleHelp);
 registerCommand('keepjoin', handleKeepJoin);
 registerCommand('quitjoin', handleQuitJoin);
+registerCommand('audio', handleAudioCommand);
 for (const [cmd, handler] of Object.entries(playbackCommands)) {
     registerCommand(cmd, handler);
 }

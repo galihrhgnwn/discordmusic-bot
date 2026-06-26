@@ -12,6 +12,8 @@ import { nowPlayingEmbed, infoEmbed, errorEmbed } from '../utils/embeds.js'
 import { getConfig } from '../utils/serverConfig.js'
 import { isAutoplay, setAutoplay } from './autoplayManager.js'
 import { handleAutoplay } from './autoplay.js'
+import { getSource, setSource } from './audioSourceManager.js'
+import * as lavalinkManager from './lavalinkManager.js'
 
 export const playerMap       = new Map()   // guildId → AudioPlayer
 export const connectionMap   = new Map()   // guildId → VoiceConnection
@@ -20,6 +22,7 @@ export const songStartMap    = new Map()   // guildId → Date.now()
 export const voiceChannelMap = new Map()   // guildId → VoiceChannel
 export const textChannelMap  = new Map()   // guildId → TextChannel
 export const keepJoinMap     = new Map()   // keepJoin functionality
+export const isSwitchingBackendMap = new Map() // guildId → Boolean
 
 // Detect format dari ekstensi file
 function getStreamType(filePath) {
@@ -30,6 +33,24 @@ function getStreamType(filePath) {
 }
 
 export async function playSong(guildId, voiceChannel, textChannel) {
+  const source = getSource(guildId)
+  if (source === 'lavalink') {
+    if (!lavalinkManager.isLavalinkAvailable()) {
+      textChannel.send({ embeds: [errorEmbed('❌ Lavalink is selected but not available. Falling back to default.')] }).catch(() => {})
+      return playSongDefault(guildId, voiceChannel, textChannel)
+    }
+    const song = queue.getCurrentSong(guildId)
+    if (!song) return
+    return lavalinkManager.playSongLavalink(guildId, voiceChannel, textChannel, song).catch(e => {
+        textChannel.send({ embeds: [errorEmbed(`Lavalink Error: ${e.message}`)] }).catch(() => {})
+        return playSongDefault(guildId, voiceChannel, textChannel)
+    })
+  }
+
+  return playSongDefault(guildId, voiceChannel, textChannel)
+}
+
+export async function playSongDefault(guildId, voiceChannel, textChannel) {
   const song = queue.getCurrentSong(guildId)
   if (!song) {
     textChannel.send({ embeds: [infoEmbed('✅ Queue ended.')] }).catch(() => {})
@@ -71,6 +92,11 @@ export async function playSong(guildId, voiceChannel, textChannel) {
     playerMap.set(guildId, player)
 
     player.on(AudioPlayerStatus.Idle, async () => {
+      if (isSwitchingBackendMap.get(guildId)) {
+          // If we are switching backend, do not skip song or process idle events.
+          isSwitchingBackendMap.delete(guildId)
+          return;
+      }
       clearIdleTimer(guildId)
 
       const finishedSong = queue.getCurrentSong(guildId)
@@ -177,21 +203,39 @@ export async function playSong(guildId, voiceChannel, textChannel) {
 }
 
 export function pausePlayer(guildId) {
+  if (getSource(guildId) === 'lavalink') {
+      return lavalinkManager.pauseLavalink(guildId)
+  }
   playerMap.get(guildId)?.pause()
 }
 
 export function resumePlayer(guildId) {
+  if (getSource(guildId) === 'lavalink') {
+      return lavalinkManager.resumeLavalink(guildId)
+  }
   playerMap.get(guildId)?.unpause()
 }
 
 export function stopPlayer(guildId) {
-  playerMap.get(guildId)?.stop()
   queue.clearQueue(guildId)
   setAutoplay(guildId, false)   // reset autoplay saat stop
+  if (getSource(guildId) === 'lavalink') {
+      lavalinkManager.stopLavalink(guildId)
+  } else {
+      playerMap.get(guildId)?.stop()
+  }
   destroyConnection(guildId)
 }
 
 export function skip(guildId) {
+    if (getSource(guildId) === 'lavalink') {
+        if (lavalinkManager.getLavalinkPlayerState(guildId) !== 'disconnected') {
+            lavalinkManager.skipLavalink(guildId)
+            return;
+        }
+        queue.skipSong(guildId);
+        return;
+    }
     const player = playerMap.get(guildId);
     if (player) {
         player.stop(); // Triggers idle event naturally
@@ -201,6 +245,9 @@ export function skip(guildId) {
 }
 
 export function setVolume(guildId, volume) {
+  if (getSource(guildId) === 'lavalink') {
+      return lavalinkManager.setLavalinkVolume(guildId, volume)
+  }
   const player = playerMap.get(guildId)
   if (player?.state?.resource?.volume) {
     player.state.resource.volume.setVolume(volume / 100)
@@ -208,6 +255,9 @@ export function setVolume(guildId, volume) {
 }
 
 export function getPlayerState(guildId) {
+  if (getSource(guildId) === 'lavalink') {
+      return lavalinkManager.getLavalinkPlayerState(guildId)
+  }
   const player = playerMap.get(guildId)
   if (!player) return 'disconnected'
   switch (player.state.status) {
@@ -216,6 +266,27 @@ export function getPlayerState(guildId) {
     case AudioPlayerStatus.Idle:    return 'idle'
     default:                        return 'disconnected'
   }
+}
+
+export async function switchBackend(guildId, newSource, textChannel, voiceChannel) {
+    setSource(guildId, newSource);
+
+    // Check state of the old backend implicitly by getting state before we change fully
+    const currentState = getPlayerState(guildId);
+
+    // Set switching flag so default player doesn't advance queue
+    isSwitchingBackendMap.set(guildId, true);
+    setTimeout(() => isSwitchingBackendMap.delete(guildId), 2000); // prevent state leak
+
+    // Stop old backends gracefully
+    playerMap.get(guildId)?.stop();
+    lavalinkManager.stopLavalink(guildId);
+    destroyConnection(guildId);
+
+    // If there is a song in queue, try to restart playback on new backend
+    if (queue.getCurrentSong(guildId) && voiceChannel) {
+        await playSong(guildId, voiceChannel, textChannel);
+    }
 }
 
 export function getSongStartTime(guildId) {
