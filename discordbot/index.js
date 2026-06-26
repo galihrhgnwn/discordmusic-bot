@@ -22,6 +22,7 @@ import { handleAudioCommand } from './commands/audio.js';
 import { connectionMap } from './core/player.js';
 import { stopPlayer } from './core/player.js';
 import { preloadAllSessions, cleanupExpiredTokens } from './core/userSessionManager.js';
+import { initLavalink } from './core/lavalinkManager.js';
 
 // Create folders on start if they do not exist
 const folders = [
@@ -114,6 +115,8 @@ const client = new Client({
         GatewayIntentBits.MessageContent
     ]
 });
+
+initLavalink(client);
 
 client.on('ready', async () => {
     console.log(`Bot logged in as ${client.user.tag}`);
