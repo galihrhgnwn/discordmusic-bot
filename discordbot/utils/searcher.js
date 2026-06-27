@@ -16,10 +16,30 @@ export function parsePrefix(rawQuery) {
 
 const MUSIC_KEYWORDS = ['music', 'song', 'lyrics', 'official', 'audio', 'mv', 'lagu']
 
-export async function searchSongs(rawQuery, requesterId = null) {
+export async function searchSongs(rawQuery, requesterId = null, audioSource = 'default') {
   const { mode, cleanQuery } = parsePrefix(rawQuery)
 
   let results = []
+
+  if (audioSource === 'lavalink') {
+      try {
+          const { searchLavalink } = await import('../core/lavalinkManager.js');
+          results = await searchLavalink(cleanQuery);
+          // Apply filters
+          if (mode === 'artist') {
+            results = results.filter(v =>
+              v.author.toLowerCase().includes(cleanQuery.toLowerCase())
+            )
+          } else if (mode === 'short') {
+            results = results.filter(v => v.duration < 300 && v.duration > 30)
+          } else if (mode === 'long') {
+            results = results.filter(v => v.duration > 600)
+          }
+          return results;
+      } catch (e) {
+          console.warn('[Searcher] Lavalink search failed, falling back to default:', e.message);
+      }
+  }
 
   // Prioritas 1: YouTube Music search via InnerTube
   try {
@@ -129,7 +149,7 @@ export async function searchSongs(rawQuery, requesterId = null) {
   }
 
   results.sort((a, b) => (b.views || 0) - (a.views || 0))
-  return results.slice(0, 5)
+  return results.slice(0, 25)
 }
 
 export function formatViews(views) {

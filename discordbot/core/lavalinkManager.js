@@ -170,6 +170,46 @@ export function stopLavalink(guildId) {
     }
 }
 
+export async function searchLavalink(query) {
+    if (!isLavalinkAvailable()) throw new Error('Lavalink is not connected');
+    const node = shoukaku.options.nodeResolver(shoukaku.nodes);
+    if (!node) throw new Error('No Lavalink nodes available');
+
+    const searchResult = await node.rest.resolve(`ytsearch:${query}`);
+    if (!searchResult || !searchResult.data || searchResult.data.length === 0) {
+        return [];
+    }
+
+    let tracks = searchResult.loadType === 'search' ? searchResult.data :
+                 (searchResult.loadType === 'track' ? [searchResult.data] : []);
+
+    // deduplicate by videoId (which is info.identifier) and limit to 25
+    const seen = new Set();
+    const results = [];
+
+    for (const track of tracks) {
+        const info = track.info;
+        if (!info || !info.identifier) continue;
+
+        if (!seen.has(info.identifier)) {
+            seen.add(info.identifier);
+            results.push({
+                videoId: info.identifier,
+                title: info.title,
+                author: info.author,
+                duration: Math.floor(info.length / 1000),
+                durationStr: `${Math.floor(info.length / 1000 / 60)}:${String(Math.floor(info.length / 1000) % 60).padStart(2, '0')}`,
+                thumbnail: `https://img.youtube.com/vi/${info.identifier}/hqdefault.jpg`,
+                url: info.uri,
+                views: '' // Lavalink doesn't return view counts
+            });
+            if (results.length >= 25) break;
+        }
+    }
+
+    return results;
+}
+
 export function skipLavalink(guildId) {
     const player = lavalinkPlayers.get(guildId);
     if (player) {
