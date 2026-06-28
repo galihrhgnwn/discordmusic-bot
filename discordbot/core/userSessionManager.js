@@ -211,13 +211,15 @@ export function cleanupExpiredTokens() {
 export async function preloadAllSessions() {
   const users = getAllLoggedInUsers()
   console.log(`[UserSession] Preloading ${users.length} user sessions...`)
-  for (const userId of users) {
-    try {
-      await getUserSession(userId)
-      console.log(`[UserSession] ✅ Loaded session for user ${userId}`)
-    } catch (e) {
-      console.warn(`[UserSession] Failed to load session for ${userId}:`, e.message)
-    }
-  }
+  await Promise.all(
+    users.map(async (userId) => {
+      try {
+        await getUserSession(userId)
+        console.log(`[UserSession] ✅ Loaded session for user ${userId}`)
+      } catch (e) {
+        console.warn(`[UserSession] Failed to load session for ${userId}:`, e.message)
+      }
+    })
+  )
 }
 
