@@ -13,8 +13,8 @@
     "bot": "NODE_ENV=production BOT_ONLY=true node discordbot/index.js",
     "prod": "npm run build && npm run start",
     "lint": "eslint .",
-    "clean": "next clean",
-    "test": "node --test"
+    "test": "node --test",
+    "clean": "next clean"
   },
   "dependencies": {
     "@auth/core": "^0.34.3",

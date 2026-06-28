@@ -1,26 +1,21 @@
+import { parseVideoId } from './urlParser.js';
+import assert from 'assert';
 import { describe, it } from 'node:test';
-import assert from 'node:assert';
-import { detectInputType } from './urlParser.js';
 
-describe('detectInputType', () => {
-  it('should return search for plain text', () => {
-    assert.strictEqual(detectInputType('hello world'), 'search');
-    assert.strictEqual(detectInputType('just some search query'), 'search');
+describe('parseVideoId', () => {
+  it('should parse youtu.be URLs', () => {
+    assert.strictEqual(parseVideoId('https://youtu.be/dQw4w9WgXcQ'), 'dQw4w9WgXcQ');
   });
 
-  it('should return spotify for spotify URLs', () => {
-    assert.strictEqual(detectInputType('https://open.spotify.com/track/123'), 'spotify');
-    assert.strictEqual(detectInputType('http://spotify.com/album/456'), 'spotify');
+  it('should parse youtube.com/watch?v= URLs', () => {
+    assert.strictEqual(parseVideoId('https://www.youtube.com/watch?v=dQw4w9WgXcQ'), 'dQw4w9WgXcQ');
   });
 
-  it('should return youtube_playlist for URLs with list parameter', () => {
-    assert.strictEqual(detectInputType('https://www.youtube.com/watch?v=123&list=PL456'), 'youtube_playlist');
-    assert.strictEqual(detectInputType('https://youtube.com/playlist?list=PL456'), 'youtube_playlist');
+  it('should parse URLs with other query parameters', () => {
+    assert.strictEqual(parseVideoId('https://www.youtube.com/watch?foo=bar&v=dQw4w9WgXcQ&baz=qux'), 'dQw4w9WgXcQ');
   });
 
-  it('should return youtube_video for other HTTP/HTTPS URLs', () => {
-    assert.strictEqual(detectInputType('https://www.youtube.com/watch?v=123'), 'youtube_video');
-    assert.strictEqual(detectInputType('http://youtu.be/123'), 'youtube_video');
-    assert.strictEqual(detectInputType('https://example.com'), 'youtube_video'); // Current behavior fallback
+  it('should throw an error for invalid URLs', () => {
+    assert.throws(() => parseVideoId('https://www.google.com'), Error);
   });
 });
