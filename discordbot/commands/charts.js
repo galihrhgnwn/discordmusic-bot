@@ -24,47 +24,55 @@ const GENRES = ['All', 'Pop', 'Hip-Hop', 'R&B', 'Rock', 'Electronic']
 const REFRESH_COOLDOWN = 30 * 1000
 const chartStateMap = new Map()
 
-async function fetchFromYtMusic(region) {
-  const yt = getSession()
-  const charts = await yt.music.getCharts(region)
-  const songs = charts?.songs?.contents || []
-  if (!songs.length) return null
+// Fetch trending music dari YouTube
+async function fetchTrending(region = 'ID') {
+  // Prioritas 1: YouTube Music charts via InnerTube
+  try {
+    const yt = getSession()
+    const charts = await yt.music.getCharts(region)
 
-  return songs.slice(0, 10).map(s => ({
-    videoId: s.id,
-    title: s.title || 'Unknown',
-    author: s.artists?.map(a => a.name).join(', ') || '',
-    duration: s.duration?.seconds || 0,
-    thumbnail: s.thumbnail?.contents?.[0]?.url || '',
-    views: s.views || ''
-  }))
-}
+    const songs = charts?.songs?.contents || []
+    if (songs.length) {
+      return songs.slice(0, 10).map(s => ({
+        videoId: s.id,
+        title: s.title || 'Unknown',
+        author: s.artists?.map(a => a.name).join(', ') || '',
+        duration: s.duration?.seconds || 0,
+        thumbnail: s.thumbnail?.contents?.[0]?.url || '',
+        views: s.views || ''
+      }))
+    }
+  } catch (e) {
+    console.warn('[Charts] YouTube Music getCharts failed:', e.message)
+  }
 
-async function fetchFromYtTrending() {
-  const yt = getSession()
-  const trending = await yt.getTrending()
-  const musicSection = trending?.sections?.find(s =>
-    s.title?.text?.toLowerCase().includes('music') ||
-    s.title?.text?.toLowerCase().includes('musik')
-  )
-  const items = musicSection?.contents ||
-                trending?.sections?.[0]?.contents || []
-  const songs = items
-    .filter(item => item.id && item.title)
-    .slice(0, 10)
-    .map(item => ({
-      videoId: item.id,
-      title: item.title?.text || item.title || 'Unknown',
-      author: item.author?.name || '',
-      duration: item.duration?.seconds || 0,
-      thumbnail: item.thumbnail?.[0]?.url || '',
-      views: item.view_count?.text || ''
-    }))
+  // Prioritas 2: YouTube getTrending via InnerTube
+  try {
+    const yt = getSession()
+    const trending = await yt.getTrending()
+    const musicSection = trending?.sections?.find(s =>
+      s.title?.text?.toLowerCase().includes('music') ||
+      s.title?.text?.toLowerCase().includes('musik')
+    )
+    const items = musicSection?.contents ||
+                  trending?.sections?.[0]?.contents || []
+    const songs = items
+      .filter(item => item.id && item.title)
+      .slice(0, 10)
+      .map(item => ({
+        videoId: item.id,
+        title: item.title?.text || item.title || 'Unknown',
+        author: item.author?.name || '',
+        duration: item.duration?.seconds || 0,
+        thumbnail: item.thumbnail?.[0]?.url || '',
+        views: item.view_count?.text || ''
+      }))
+    if (songs.length) return songs
+  } catch (e) {
+    console.warn('[Charts] getTrending failed:', e.message)
+  }
 
-  return songs.length ? songs : null
-}
-
-async function fetchFromYtSearch(region) {
+  // Prioritas 3: yt-search fallback
   const REGION_QUERY = {
     'ID': 'trending musik indonesia 2025',
     'US': 'trending music usa 2025',
@@ -72,9 +80,8 @@ async function fetchFromYtSearch(region) {
     'KR': 'trending kpop 2025',
     'GB': 'trending music uk 2025',
   }
-  const query = REGION_QUERY[region] || REGION_QUERY['ID']
-  const r = await yts(query)
-  const songs = r.videos
+  const r = await yts(REGION_QUERY[region] || REGION_QUERY['ID'])
+  return r.videos
     .filter(v => v.duration?.seconds >= 30 && v.duration?.seconds <= 600)
     .slice(0, 10)
     .map(v => ({
@@ -87,30 +94,6 @@ async function fetchFromYtSearch(region) {
         ? `${(v.views / 1_000_000).toFixed(1)}M`
         : ''
     }))
-
-  return songs.length ? songs : null
-}
-
-// Fetch trending music dari YouTube
-async function fetchTrending(region = 'ID') {
-  const providers = [
-    { name: 'YouTube Music', fetcher: () => fetchFromYtMusic(region) },
-    { name: 'YouTube Trending', fetcher: () => fetchFromYtTrending() },
-    { name: 'yt-search', fetcher: () => fetchFromYtSearch(region) }
-  ]
-
-  for (const provider of providers) {
-    try {
-      const songs = await provider.fetcher()
-      if (songs && songs.length > 0) {
-        return songs
-      }
-    } catch (e) {
-      console.warn(`[Charts] ${provider.name} failed:`, e.message)
-    }
-  }
-
-  return []
 }
 
 function applyGenreFilter(songs, genre) {

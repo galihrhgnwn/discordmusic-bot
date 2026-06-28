@@ -14,8 +14,13 @@ Platform.shim.eval = async (data, env) => {
     properties.push(`sig: exportedVars.sigFunction("${env.sig}")`)
   }
   const code = `${data.output}\nreturn { ${properties.join(', ')} }`
-  // Pakai vm.runInNewContext dengan context kosong (Object.create(null)) untuk keamanan
-  return vm.runInNewContext(`(function() { ${code} })()`, Object.create(null))
+  // Pakai vm.runInNewContext untuk keamanan lebih baik
+  try {
+    return vm.runInNewContext(`(function() { ${code} })()`)
+  } catch {
+    // Fallback ke Function constructor
+    return new Function(code)()
+  }
 }
 
 let _session = null
