@@ -2,6 +2,7 @@ import { Innertube, UniversalCache, Platform } from 'youtubei.js'
 import { Jinter } from 'jintr'
 import fs from 'fs'
 import path from 'path'
+import { logInfo } from '../utils/logger.js';
 
 // WAJIB: set eval SEBELUM Innertube.create() dipanggil
 // Ini yang bikin decipher bisa jalan di Node.js
@@ -51,7 +52,7 @@ export async function loadSavedCredentials() {
   try {
     const creds = JSON.parse(fs.readFileSync(CREDS_FILE, 'utf-8'))
     await _session.session.signIn(creds)
-    console.log('[Session] ✅ Credentials loaded')
+    logInfo('[Session] ✅ Credentials loaded')
     return true
   } catch (e) {
     console.warn('[Session] Failed to load credentials:', e.message)
@@ -65,7 +66,7 @@ export function watchCredentials() {
   const dir = path.dirname(CREDS_FILE)
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
 
-  console.log('[Session] Polling for credential changes every 5s...')
+  logInfo('[Session] Polling for credential changes every 5s...')
 
   setInterval(async () => {
     try {
@@ -82,7 +83,7 @@ export function watchCredentials() {
       if (_session?.session?.logged_in) return
 
       await _session.session.signIn(creds)
-      console.log('[Session] ✅ Credentials reloaded from file change')
+      logInfo('[Session] ✅ Credentials reloaded from file change')
 
     } catch (e) {
       console.warn('[Session] Polling reload failed:', e.message)

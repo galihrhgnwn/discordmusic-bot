@@ -1,4 +1,5 @@
 import { errorEmbed } from '../utils/embeds.js';
+import { logError } from '../utils/logger.js';
 
 const commands = new Map();
 
@@ -24,7 +25,7 @@ export async function handleMessage(message) {
         try {
             await handler(message, args.slice(1));
         } catch (e) {
-            console.error(e);
+            logError(e);
             await message.reply({ embeds: [errorEmbed(`Error executing command: ${e.message}`)] }).catch(() => {});
         }
     } else {
@@ -33,7 +34,7 @@ export async function handleMessage(message) {
             try {
                 await playHandler(message, args);
             } catch (e) {
-                console.error(e);
+                logError(e);
                 await message.reply({ embeds: [errorEmbed(`Error executing command: ${e.message}`)] }).catch(() => {});
             }
         }

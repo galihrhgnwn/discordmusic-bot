@@ -14,14 +14,42 @@ type LogEntry = {
 export default function LiveConsole() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [secret, setSecret] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('dashboard_secret') || '';
+    }
+    return '';
+  });
+  const [isLocked, setIsLocked] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return !!localStorage.getItem('dashboard_secret');
+    }
+    return false;
+  });
   const endRef = useRef<HTMLDivElement>(null);
 
+  const handleSetSecret = (e: React.FormEvent) => {
+    e.preventDefault();
+    localStorage.setItem('dashboard_secret', secret);
+    setIsLocked(true);
+  };
+
+  const handleResetSecret = () => {
+    localStorage.removeItem('dashboard_secret');
+    setSecret('');
+    setIsLocked(false);
+    setIsConnected(false);
+    setLogs([]);
+  };
+
   useEffect(() => {
+    if (!isLocked || !secret) return;
+
     let evtSource: EventSource | null = null;
     let fallbackInterval: NodeJS.Timeout | null = null;
 
     const connectSSE = () => {
-      evtSource = new EventSource('/api/logs');
+      evtSource = new EventSource(`/api/logs?secret=${encodeURIComponent(secret)}`);
       evtSource.onopen = () => setIsConnected(true);
       evtSource.onmessage = (event) => {
         try {
@@ -52,13 +80,42 @@ export default function LiveConsole() {
       if (evtSource) evtSource.close();
       if (fallbackInterval) clearInterval(fallbackInterval);
     };
-  }, [isConnected]);
+  }, [isConnected, isLocked, secret]);
 
   useEffect(() => {
     if (endRef.current) {
       endRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [logs]);
+
+  if (!isLocked) {
+    return (
+      <div className="flex flex-col h-[500px] border border-white/10 rounded-xl bg-black overflow-hidden shadow-2xl relative ring-1 ring-white/5 isolate items-center justify-center p-6">
+        <div className="absolute inset-0 h-40 bg-gradient-to-b from-indigo-500/10 to-transparent opacity-50 pointer-events-none -z-10 blur-xl" />
+        <Terminal className="w-12 h-12 text-indigo-400 mb-4" />
+        <h2 className="text-xl font-semibold text-white mb-2">Live Console Locked</h2>
+        <p className="text-neutral-400 text-sm text-center mb-6 max-w-md">
+          Please enter the dashboard secret to view live console logs. This secret must match the DASHBOARD_SECRET environment variable.
+        </p>
+        <form onSubmit={handleSetSecret} className="flex gap-2 w-full max-w-sm">
+          <input
+            type="password"
+            value={secret}
+            onChange={(e) => setSecret(e.target.value)}
+            placeholder="Enter secret..."
+            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+            required
+          />
+          <button
+            type="submit"
+            className="px-4 py-2 bg-indigo-500 hover:bg-indigo-400 text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            Unlock
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-[500px] border border-white/10 rounded-xl bg-black overflow-hidden shadow-2xl relative ring-1 ring-white/5 isolate">
@@ -74,6 +131,13 @@ export default function LiveConsole() {
           <h2 className="text-sm font-medium tracking-tight text-neutral-200">Terminal Output</h2>
         </div>
         <div className="flex items-center gap-4 text-xs font-medium">
+          <button
+            onClick={handleResetSecret}
+            className="text-neutral-500 hover:text-white transition-colors"
+            title="Lock Console"
+          >
+            Lock
+          </button>
           <div className="flex items-center gap-1.5 text-neutral-400">
             <Server className="w-3.5 h-3.5" />
             <span>Node.js v22</span>
