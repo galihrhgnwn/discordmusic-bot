@@ -3,7 +3,6 @@ import vm from 'vm'
 import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
-import { logInfo, logError } from '../utils/logger.js';
 
 // Set eval (aman dipanggil berkali-kali)
 Platform.shim.eval = async (data, env) => {
@@ -11,7 +10,11 @@ Platform.shim.eval = async (data, env) => {
   if (env.n) properties.push(`n: exportedVars.nFunction("${env.n}")`)
   if (env.sig) properties.push(`sig: exportedVars.sigFunction("${env.sig}")`)
   const code = `${data.output}\nreturn { ${properties.join(', ')} }`
-  return vm.runInNewContext(`(function() { ${code} })()`, Object.create(null))
+  try {
+    return vm.runInNewContext(`(function() { ${code} })()`)
+  } catch {
+    return new Function(code)()
+  }
 }
 
 const USERS_DIR = path.resolve('./auth/users')
@@ -66,7 +69,7 @@ export async function getUserSession(userId) {
       sessionMap.set(userId, yt)
       return yt
     } catch(e) {
-      logError(`Failed to load cookie auth for ${userId}:`, e)
+      console.error(`Failed to load cookie auth for ${userId}:`, e)
     }
   }
 
@@ -197,7 +200,7 @@ export function cleanupExpiredTokens() {
       }
     }
     if (cleaned > 0) {
-      logInfo(`[PendingAuth] Cleaned ${cleaned} expired tokens`)
+      console.log(`[PendingAuth] Cleaned ${cleaned} expired tokens`)
     }
   } catch (e) {
     console.warn('[PendingAuth] Cleanup failed:', e.message)
@@ -207,14 +210,16 @@ export function cleanupExpiredTokens() {
 // Preload semua user sessions saat bot start
 export async function preloadAllSessions() {
   const users = getAllLoggedInUsers()
-  logInfo(`[UserSession] Preloading ${users.length} user sessions...`)
-  for (const userId of users) {
-    try {
-      await getUserSession(userId)
-      logInfo(`[UserSession] ✅ Loaded session for user ${userId}`)
-    } catch (e) {
-      console.warn(`[UserSession] Failed to load session for ${userId}:`, e.message)
-    }
-  }
+  console.log(`[UserSession] Preloading ${users.length} user sessions...`)
+  await Promise.all(
+    users.map(async (userId) => {
+      try {
+        await getUserSession(userId)
+        console.log(`[UserSession] ✅ Loaded session for user ${userId}`)
+      } catch (e) {
+        console.warn(`[UserSession] Failed to load session for ${userId}:`, e.message)
+      }
+    })
+  )
 }
 

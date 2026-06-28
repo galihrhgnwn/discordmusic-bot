@@ -9,7 +9,6 @@ import {
   ButtonBuilder, ButtonStyle
 } from 'discord.js'
 import { userInVoice } from '../utils/checkPermissions.js'
-import { logError } from '../utils/logger.js';
 
 // Helper: require login
 async function requireLogin(message) {
@@ -85,37 +84,37 @@ async function fetchUserPlaylists(yt) {
       .filter(p => p.id && p.title)
 
   } catch (e) {
-    logError('[Playlist] fetchUserPlaylists error:', e.message)
+    console.error('[Playlist] fetchUserPlaylists error:', e.message)
+  }
 
-    // Fallback: coba getLibrary biasa
-    try {
-      const library = await yt.music.getLibrary()
-      const items = []
+  // Fallback: coba getLibrary biasa
+  try {
+    const library = await yt.music.getLibrary()
+    const items = []
 
-      // Safely iterate contents
-      if (library?.contents && Array.isArray(library.contents)) {
-        for (const section of library.contents) {
-          const sectionItems = section?.contents || section?.items || []
-          if (Array.isArray(sectionItems)) {
-            items.push(...sectionItems)
-          }
+    // Safely iterate contents
+    if (library?.contents && Array.isArray(library.contents)) {
+      for (const section of library.contents) {
+        const sectionItems = section?.contents || section?.items || []
+        if (Array.isArray(sectionItems)) {
+          items.push(...sectionItems)
         }
       }
-
-      return items
-        .filter(i => i && (i.id || i.playlist_id))
-        .slice(0, 50)
-        .map(i => ({
-          id: i.id || i.playlist_id || '',
-          title: i.title?.text || i.title || i.name || 'Unknown',
-          subtitle: { text: i.subtitle?.text || i.item_count || '' }
-        }))
-        .filter(p => p.id)
-
-    } catch (e2) {
-      logError('[Playlist] Fallback also failed:', e2.message)
-      throw new Error(`Cannot fetch playlists: ${e2.message}`)
     }
+
+    return items
+      .filter(i => i && (i.id || i.playlist_id))
+      .slice(0, 50)
+      .map(i => ({
+        id: i.id || i.playlist_id || '',
+        title: i.title?.text || i.title || i.name || 'Unknown',
+        subtitle: { text: i.subtitle?.text || i.item_count || '' }
+      }))
+      .filter(p => p.id)
+
+  } catch (e2) {
+    console.error('[Playlist] Fallback also failed:', e2.message)
+    throw new Error(`Cannot fetch playlists: ${e2.message}`)
   }
 }
 
@@ -183,7 +182,7 @@ async function handlePlaylistList(message, userId) {
     }
 
   } catch (e) {
-    logError('[Playlist] List error:', e)
+    console.error('[Playlist] List error:', e)
     await loading.edit({ embeds: [errorEmbed(`Failed to fetch playlists: ${e.message}`)] })
   }
 }
@@ -220,7 +219,7 @@ async function handlePlaylistPlay(message, userId, query) {
     await loadAndQueuePlaylist(message, userId, playlistId, match.title, loading)
 
   } catch (e) {
-    logError('[Playlist] Play error:', e)
+    console.error('[Playlist] Play error:', e)
     await loading.edit({ embeds: [errorEmbed(`Failed: ${e.message}`)] })
   }
 }
@@ -297,7 +296,7 @@ async function handlePlaylistSearch(message, userId, query) {
     })
 
   } catch (e) {
-    logError('[Playlist] Search error:', e)
+    console.error('[Playlist] Search error:', e)
     await loading.edit({ embeds: [errorEmbed(`Failed: ${e.message}`)] })
   }
 }
@@ -370,7 +369,7 @@ async function loadAndQueuePlaylist(message, userId, playlistId, playlistTitle, 
     }
 
   } catch (e) {
-    logError('[Playlist] Load error:', e)
+    console.error('[Playlist] Load error:', e)
     const embed = errorEmbed(`Failed to load playlist: ${e.message}`)
     if (editTarget) editTarget.edit({ embeds: [embed], components: [] }).catch(() => {})
     else message.channel.send({ embeds: [embed] }).catch(() => {})
