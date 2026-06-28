@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { hasCache, getCachePath, enforceLimit } from '../utils/cacheManager.js'
 import { getSession } from './sessionManager.js'
+import { logInfo } from '../utils/logger.js';
 
 const PYTUBE_API = 'https://pytube.hidenplay.net'
 
@@ -76,7 +77,7 @@ function tryFallbackItag(streams, failedItag) {
 }
 
 async function downloadViaPytube(videoId) {
-  console.log(`[PytubeDL] Fetching info for ${videoId}`)
+  logInfo(`[PytubeDL] Fetching info for ${videoId}`)
 
   // Step 1: Get info dengan retry
   let info
@@ -99,7 +100,7 @@ async function downloadViaPytube(videoId) {
     throw new Error(`No suitable audio stream found for ${videoId}`)
   }
 
-  console.log(`[PytubeDL] Selected itag: ${itag} for ${videoId}`)
+  logInfo(`[PytubeDL] Selected itag: ${itag} for ${videoId}`)
 
   // Step 3: Download dari /api/download
   const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`
@@ -172,7 +173,7 @@ async function downloadViaPytube(videoId) {
   }
 
   const sizeMB = (fs.statSync(filePath).size / 1024 / 1024).toFixed(2)
-  console.log(`[PytubeDL] ✅ ${videoId} — itag ${itag} — ${sizeMB}MB`)
+  logInfo(`[PytubeDL] ✅ ${videoId} — itag ${itag} — ${sizeMB}MB`)
 
   sourceMap.set(videoId, 'pytube')
   return { filePath }
@@ -182,7 +183,7 @@ async function downloadViaPytube(videoId) {
 
 export async function downloadSong(videoId, quality, startTime = null, requesterId = null) {
   if (hasCache(videoId)) {
-    console.log(`[Downloader] Cache hit: ${videoId}`)
+    logInfo(`[Downloader] Cache hit: ${videoId}`)
     return { filePath: getCachePath(videoId) }
   }
 
