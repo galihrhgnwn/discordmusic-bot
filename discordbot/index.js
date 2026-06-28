@@ -3,7 +3,7 @@ import fs from 'fs';
 
 const [major] = process.versions.node.split('.').map(Number);
 if (major < 20) {
-    console.error('❌ Node.js 20+ required for yt-dlp EJS support');
+    logError('❌ Node.js 20+ required for yt-dlp EJS support');
     process.exit(1);
 }
 
@@ -23,6 +23,7 @@ import { connectionMap } from './core/player.js';
 import { stopPlayer } from './core/player.js';
 import { preloadAllSessions, cleanupExpiredTokens } from './core/userSessionManager.js';
 import { initLavalink } from './core/lavalinkManager.js';
+import { addLogListener, removeLogListener, logInfo, logError } from './utils/logger.js';
 
 // Create folders on start if they do not exist
 const folders = [
@@ -34,25 +35,6 @@ for (const folder of folders) {
     fs.mkdirSync(folder, { recursive: true });
   }
 }
-
-// Intercept console.log and console.error for live console
-const logListeners = new Set();
-const origLog = console.log;
-const origError = console.error;
-
-console.log = (...args) => {
-    origLog(...args);
-    const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
-    const logData = JSON.stringify({ type: 'log', message: msg, time: new Date().toISOString() });
-    logListeners.forEach(l => l(logData));
-};
-
-console.error = (...args) => {
-    origError(...args);
-    const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
-    const logData = JSON.stringify({ type: 'error', message: msg, time: new Date().toISOString() });
-    logListeners.forEach(l => l(logData));
-};
 
 // Setup Next.js + Express server for dashboard & healthchecks
 import next from 'next';
@@ -79,9 +61,9 @@ app.get('/api/logs', (req, res) => {
     res.write(`data: ${JSON.stringify({ type: 'log', message: '[System] Connected to dashboard live console.', time: new Date().toISOString() })}\n\n`);
 
     const listener = (data) => res.write(`data: ${data}\n\n`);
-    logListeners.add(listener);
+    addLogListener(listener);
     req.on('close', () => {
-        logListeners.delete(listener);
+        removeLogListener(listener);
     });
 });
 
@@ -119,14 +101,14 @@ const client = new Client({
 initLavalink(client);
 
 client.on('ready', async () => {
-    console.log(`Bot logged in as ${client.user.tag}`);
+    logInfo(`Bot logged in as ${client.user.tag}`);
     // Coba load credentials lagi setelah bot ready
     // (kadang file sudah ada tapi session belum sempat sign in)
     const loaded = await loadSavedCredentials()
     if (loaded) {
-      console.log('[Bot] ✅ YouTube session active')
+      logInfo('[Bot] ✅ YouTube session active')
     } else {
-      console.log('[Bot] ℹ️ No credentials — login via dashboard')
+      logInfo('[Bot] ℹ️ No credentials — login via dashboard')
     }
 });
 
@@ -137,17 +119,17 @@ client.on('messageCreate', async (message) => {
 
 // Global error handler
 process.on('unhandledRejection', (error) => {
-    console.error('[UnhandledRejection]', error);
+    logError('[UnhandledRejection]', error);
 });
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
-    console.log('[Shutdown] Stopping all players...');
+    logInfo('[Shutdown] Stopping all players...');
     for (const guildId of connectionMap.keys()) {
         try {
             stopPlayer(guildId);
         } catch (e) {
-            console.error(`Failed to stop player for guild ${guildId}:`, e.message);
+            logError(`Failed to stop player for guild ${guildId}:`, e.message);
         }
     }
     client.destroy();
@@ -159,7 +141,7 @@ async function main() {
         await nextApp.prepare();
     }
     app.listen(port, () => {
-        console.log(`HTTP server listening on port ${port} (Dashboard: ${!isBotOnly ? 'Enabled' : 'Disabled'})`);
+        logInfo(`HTTP server listening on port ${port} (Dashboard: ${!isBotOnly ? 'Enabled' : 'Disabled'})`);
     });
 
     for (const dir of ['./auth', './auth/users', './auth/pending', './auth/cookies', './cache', './data']) {
@@ -178,9 +160,9 @@ async function main() {
     await preloadAllSessions();
 
     if (loaded) {
-      console.log('[Bot] ✅ Global YouTube session active')
+      logInfo('[Bot] ✅ Global YouTube session active')
     } else {
-      console.log('[Bot] ℹ️ Running without global login')
+      logInfo('[Bot] ℹ️ Running without global login')
     }
 
     watchCredentials();
@@ -188,8 +170,8 @@ async function main() {
     if (process.env.DISCORD_TOKEN) {
         await client.login(process.env.DISCORD_TOKEN);
     } else {
-        console.log('DISCORD_TOKEN is not set. Bot will not connect to Discord.');
+        logInfo('DISCORD_TOKEN is not set. Bot will not connect to Discord.');
     }
 }
 
-main().catch(console.error);
+main().catch(logError);

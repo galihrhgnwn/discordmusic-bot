@@ -53,7 +53,19 @@ function runCommand(input) {
       return resolve();
     }
 
-    const child = spawn("sh", ["-c", trimmed], {
+    const args = trimmed.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
+    const parsedArgs = args.map((arg) => {
+      if (arg.startsWith('"') && arg.endsWith('"')) return arg.slice(1, -1);
+      if (arg.startsWith("'") && arg.endsWith("'")) return arg.slice(1, -1);
+      return arg;
+    });
+
+    if (parsedArgs.length === 0) return resolve();
+
+    const command = parsedArgs[0];
+    const commandArgs = parsedArgs.slice(1);
+
+    const child = spawn(command, commandArgs, {
       cwd,
       env: process.env,
       stdio: ["inherit", "inherit", "inherit"],

@@ -5,6 +5,7 @@ import { getConfig } from '../utils/serverConfig.js'
 import { playSong, destroyConnection } from './player.js'
 import { infoEmbed, errorEmbed } from '../utils/embeds.js'
 import yts from 'yt-search'
+import { logInfo, logError } from '../utils/logger.js';
 
 function isMusicContent(item) {
   const title = (item.title?.text || item.title || '').toLowerCase()
@@ -51,7 +52,7 @@ export async function handleAutoplay(guildId, voiceChannel, textChannel, lastSon
           author: t.artists?.map(a => a.name).join(', ') || ''
         }))
 
-      console.log(`[Autoplay] Got ${relatedSongs.length} songs from YouTube Music radio`)
+      logInfo(`[Autoplay] Got ${relatedSongs.length} songs from YouTube Music radio`)
     } catch (e) {
       console.warn('[Autoplay] getWatchPlaylist failed:', e.message)
     }
@@ -73,7 +74,7 @@ export async function handleAutoplay(guildId, voiceChannel, textChannel, lastSon
             author: item.author?.name || ''
           }))
 
-        console.log(`[Autoplay] Got ${relatedSongs.length} songs from watch_next_feed`)
+        logInfo(`[Autoplay] Got ${relatedSongs.length} songs from watch_next_feed`)
       } catch (e) {
         console.warn('[Autoplay] watch_next_feed failed:', e.message)
       }
@@ -127,7 +128,7 @@ export async function handleAutoplay(guildId, voiceChannel, textChannel, lastSon
     await playSong(guildId, voiceChannel, textChannel)
 
   } catch (e) {
-    console.error('[Autoplay] Fatal error:', e)
+    logError('[Autoplay] Fatal error:', e)
     await textChannel.send({
       embeds: [errorEmbed(`Autoplay error: ${e.message}`)]
     })
