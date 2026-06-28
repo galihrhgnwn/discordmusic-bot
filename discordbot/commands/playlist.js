@@ -85,36 +85,36 @@ async function fetchUserPlaylists(yt) {
 
   } catch (e) {
     console.error('[Playlist] fetchUserPlaylists error:', e.message)
+  }
 
-    // Fallback: coba getLibrary biasa
-    try {
-      const library = await yt.music.getLibrary()
-      const items = []
+  // Fallback: coba getLibrary biasa
+  try {
+    const library = await yt.music.getLibrary()
+    const items = []
 
-      // Safely iterate contents
-      if (library?.contents && Array.isArray(library.contents)) {
-        for (const section of library.contents) {
-          const sectionItems = section?.contents || section?.items || []
-          if (Array.isArray(sectionItems)) {
-            items.push(...sectionItems)
-          }
+    // Safely iterate contents
+    if (library?.contents && Array.isArray(library.contents)) {
+      for (const section of library.contents) {
+        const sectionItems = section?.contents || section?.items || []
+        if (Array.isArray(sectionItems)) {
+          items.push(...sectionItems)
         }
       }
-
-      return items
-        .filter(i => i && (i.id || i.playlist_id))
-        .slice(0, 50)
-        .map(i => ({
-          id: i.id || i.playlist_id || '',
-          title: i.title?.text || i.title || i.name || 'Unknown',
-          subtitle: { text: i.subtitle?.text || i.item_count || '' }
-        }))
-        .filter(p => p.id)
-
-    } catch (e2) {
-      console.error('[Playlist] Fallback also failed:', e2.message)
-      throw new Error(`Cannot fetch playlists: ${e2.message}`)
     }
+
+    return items
+      .filter(i => i && (i.id || i.playlist_id))
+      .slice(0, 50)
+      .map(i => ({
+        id: i.id || i.playlist_id || '',
+        title: i.title?.text || i.title || i.name || 'Unknown',
+        subtitle: { text: i.subtitle?.text || i.item_count || '' }
+      }))
+      .filter(p => p.id)
+
+  } catch (e2) {
+    console.error('[Playlist] Fallback also failed:', e2.message)
+    throw new Error(`Cannot fetch playlists: ${e2.message}`)
   }
 }
 
