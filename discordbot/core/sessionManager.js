@@ -1,5 +1,5 @@
 import { Innertube, UniversalCache, Platform } from 'youtubei.js'
-import vm from 'vm'
+import { Jinter } from 'jintr'
 import fs from 'fs'
 import path from 'path'
 import { logInfo } from '../utils/logger.js';
@@ -15,13 +15,8 @@ Platform.shim.eval = async (data, env) => {
     properties.push(`sig: exportedVars.sigFunction("${env.sig}")`)
   }
   const code = `${data.output}\nreturn { ${properties.join(', ')} }`
-  // Pakai vm.runInNewContext untuk keamanan lebih baik
-  try {
-    return vm.runInNewContext(`(function() { ${code} })()`)
-  } catch {
-    // Fallback ke Function constructor
-    return new Function(code)()
-  }
+  const jinter = new Jinter()
+  return jinter.evaluate(`(function() { ${code} })()`)
 }
 
 let _session = null
