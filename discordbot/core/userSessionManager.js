@@ -3,6 +3,7 @@ import vm from 'vm'
 import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
+import { logInfo, logError } from '../utils/logger.js';
 
 // Set eval (aman dipanggil berkali-kali)
 Platform.shim.eval = async (data, env) => {
@@ -69,7 +70,7 @@ export async function getUserSession(userId) {
       sessionMap.set(userId, yt)
       return yt
     } catch(e) {
-      console.error(`Failed to load cookie auth for ${userId}:`, e)
+      logError(`Failed to load cookie auth for ${userId}:`, e)
     }
   }
 
@@ -200,7 +201,7 @@ export function cleanupExpiredTokens() {
       }
     }
     if (cleaned > 0) {
-      console.log(`[PendingAuth] Cleaned ${cleaned} expired tokens`)
+      logInfo(`[PendingAuth] Cleaned ${cleaned} expired tokens`)
     }
   } catch (e) {
     console.warn('[PendingAuth] Cleanup failed:', e.message)
@@ -210,11 +211,11 @@ export function cleanupExpiredTokens() {
 // Preload semua user sessions saat bot start
 export async function preloadAllSessions() {
   const users = getAllLoggedInUsers()
-  console.log(`[UserSession] Preloading ${users.length} user sessions...`)
+  logInfo(`[UserSession] Preloading ${users.length} user sessions...`)
   for (const userId of users) {
     try {
       await getUserSession(userId)
-      console.log(`[UserSession] ✅ Loaded session for user ${userId}`)
+      logInfo(`[UserSession] ✅ Loaded session for user ${userId}`)
     } catch (e) {
       console.warn(`[UserSession] Failed to load session for ${userId}:`, e.message)
     }

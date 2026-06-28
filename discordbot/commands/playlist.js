@@ -9,6 +9,7 @@ import {
   ButtonBuilder, ButtonStyle
 } from 'discord.js'
 import { userInVoice } from '../utils/checkPermissions.js'
+import { logError } from '../utils/logger.js';
 
 // Helper: require login
 async function requireLogin(message) {
@@ -84,7 +85,7 @@ async function fetchUserPlaylists(yt) {
       .filter(p => p.id && p.title)
 
   } catch (e) {
-    console.error('[Playlist] fetchUserPlaylists error:', e.message)
+    logError('[Playlist] fetchUserPlaylists error:', e.message)
 
     // Fallback: coba getLibrary biasa
     try {
@@ -112,7 +113,7 @@ async function fetchUserPlaylists(yt) {
         .filter(p => p.id)
 
     } catch (e2) {
-      console.error('[Playlist] Fallback also failed:', e2.message)
+      logError('[Playlist] Fallback also failed:', e2.message)
       throw new Error(`Cannot fetch playlists: ${e2.message}`)
     }
   }
@@ -182,7 +183,7 @@ async function handlePlaylistList(message, userId) {
     }
 
   } catch (e) {
-    console.error('[Playlist] List error:', e)
+    logError('[Playlist] List error:', e)
     await loading.edit({ embeds: [errorEmbed(`Failed to fetch playlists: ${e.message}`)] })
   }
 }
@@ -219,7 +220,7 @@ async function handlePlaylistPlay(message, userId, query) {
     await loadAndQueuePlaylist(message, userId, playlistId, match.title, loading)
 
   } catch (e) {
-    console.error('[Playlist] Play error:', e)
+    logError('[Playlist] Play error:', e)
     await loading.edit({ embeds: [errorEmbed(`Failed: ${e.message}`)] })
   }
 }
@@ -296,7 +297,7 @@ async function handlePlaylistSearch(message, userId, query) {
     })
 
   } catch (e) {
-    console.error('[Playlist] Search error:', e)
+    logError('[Playlist] Search error:', e)
     await loading.edit({ embeds: [errorEmbed(`Failed: ${e.message}`)] })
   }
 }
@@ -369,7 +370,7 @@ async function loadAndQueuePlaylist(message, userId, playlistId, playlistTitle, 
     }
 
   } catch (e) {
-    console.error('[Playlist] Load error:', e)
+    logError('[Playlist] Load error:', e)
     const embed = errorEmbed(`Failed to load playlist: ${e.message}`)
     if (editTarget) editTarget.edit({ embeds: [embed], components: [] }).catch(() => {})
     else message.channel.send({ embeds: [embed] }).catch(() => {})
