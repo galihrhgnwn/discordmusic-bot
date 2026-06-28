@@ -5,6 +5,7 @@ import { getConfig } from '../utils/serverConfig.js'
 import { playSong, destroyConnection } from './player.js'
 import { infoEmbed, errorEmbed } from '../utils/embeds.js'
 import yts from 'yt-search'
+import { logInfo, logError } from '../utils/logger.js';
 
 function isMusicContent(item) {
   const title = (item.title?.text || item.title || '').toLowerCase()
@@ -30,77 +31,73 @@ export async function handleAutoplay(guildId, voiceChannel, textChannel, lastSon
 
     let relatedSongs = []
 
-    const strategies = [
-      {
-        name: 'YouTube Music radio',
-        fn: async () => {
-          const watchPlaylist = await yt.music.getWatchPlaylist({
-            videoId: lastSong.videoId,
-            radio: true
-          })
-          const tracks = watchPlaylist?.tracks || []
-          return tracks
-            .slice(1, 6)
-            .filter(t => t.id)
-            .map(t => ({
-              videoId: t.id,
-              title: t.title?.text || t.title || 'Unknown',
-              duration: t.duration?.seconds || 0,
-              thumbnail: t.thumbnail?.[0]?.url ||
-                         t.thumbnail?.contents?.[0]?.url || '',
-              url: `https://www.youtube.com/watch?v=${t.id}`,
-              author: t.artists?.map(a => a.name).join(', ') || ''
-            }))
-        }
-      },
-      {
-        name: 'YouTube watch_next_feed',
-        fn: async () => {
-          const info = await yt.getInfo(lastSong.videoId)
-          return (info.watch_next_feed || [])
-            .filter(item => item.type === 'CompactVideo' && item.id)
-            .filter(isMusicContent)
-            .slice(0, 5)
-            .map(item => ({
-              videoId: item.id,
-              title: item.title?.text || 'Unknown',
-              duration: item.duration?.seconds || 0,
-              thumbnail: item.thumbnail?.[0]?.url || '',
-              url: `https://www.youtube.com/watch?v=${item.id}`,
-              author: item.author?.name || ''
-            }))
-        }
-      },
-      {
-        name: 'yt-search fallback',
-        fn: async () => {
-          const r = await yts(`${lastSong.title} official audio`)
-          return r.videos
-            .filter(v => v.videoId !== lastSong.videoId)
-            .filter(v => v.duration?.seconds >= 30 && v.duration?.seconds <= 600)
-            .slice(0, 5)
-            .map(v => ({
-              videoId: v.videoId,
-              title: v.title,
-              duration: v.duration?.seconds || 0,
-              thumbnail: v.thumbnail?.url || '',
-              url: v.url,
-              author: v.author?.name || ''
-            }))
-        }
-      }
-    ]
+    // Prioritas 1: YouTube Music getWatchPlaylist (radio mode)
+    try {
+      const watchPlaylist = await yt.music.getWatchPlaylist({
+        videoId: lastSong.videoId,
+        radio: true
+      })
 
-    for (const strategy of strategies) {
+      const tracks = watchPlaylist?.tracks || []
+      relatedSongs = tracks
+        .slice(1, 6)  // skip index 0 = lagu yang barusan diputar
+        .filter(t => t.id)
+        .map(t => ({
+          videoId: t.id,
+          title: t.title?.text || t.title || 'Unknown',
+          duration: t.duration?.seconds || 0,
+          thumbnail: t.thumbnail?.[0]?.url ||
+                     t.thumbnail?.contents?.[0]?.url || '',
+          url: `https://www.youtube.com/watch?v=${t.id}`,
+          author: t.artists?.map(a => a.name).join(', ') || ''
+        }))
+
+      logInfo(`[Autoplay] Got ${relatedSongs.length} songs from YouTube Music radio`)
+    } catch (e) {
+      console.warn('[Autoplay] getWatchPlaylist failed:', e.message)
+    }
+
+    // Prioritas 2: YouTube watch_next_feed
+    if (!relatedSongs.length) {
       try {
-        const songs = await strategy.fn()
-        if (songs && songs.length > 0) {
-          relatedSongs = songs
-          console.log(`[Autoplay] Got ${relatedSongs.length} songs from ${strategy.name}`)
-          break
-        }
+        const info = await yt.getInfo(lastSong.videoId)
+        relatedSongs = (info.watch_next_feed || [])
+          .filter(item => item.type === 'CompactVideo' && item.id)
+          .filter(isMusicContent)
+          .slice(0, 5)
+          .map(item => ({
+            videoId: item.id,
+            title: item.title?.text || 'Unknown',
+            duration: item.duration?.seconds || 0,
+            thumbnail: item.thumbnail?.[0]?.url || '',
+            url: `https://www.youtube.com/watch?v=${item.id}`,
+            author: item.author?.name || ''
+          }))
+
+        logInfo(`[Autoplay] Got ${relatedSongs.length} songs from watch_next_feed`)
       } catch (e) {
-        console.warn(`[Autoplay] ${strategy.name} failed:`, e.message)
+        console.warn('[Autoplay] watch_next_feed failed:', e.message)
+      }
+    }
+
+    // Prioritas 3: yt-search fallback
+    if (!relatedSongs.length) {
+      try {
+        const r = await yts(`${lastSong.title} official audio`)
+        relatedSongs = r.videos
+          .filter(v => v.videoId !== lastSong.videoId)
+          .filter(v => v.duration?.seconds >= 30 && v.duration?.seconds <= 600)
+          .slice(0, 5)
+          .map(v => ({
+            videoId: v.videoId,
+            title: v.title,
+            duration: v.duration?.seconds || 0,
+            thumbnail: v.thumbnail?.url || '',
+            url: v.url,
+            author: v.author?.name || ''
+          }))
+      } catch (e) {
+        console.warn('[Autoplay] yt-search fallback failed:', e.message)
       }
     }
 
@@ -131,7 +128,7 @@ export async function handleAutoplay(guildId, voiceChannel, textChannel, lastSon
     await playSong(guildId, voiceChannel, textChannel)
 
   } catch (e) {
-    console.error('[Autoplay] Fatal error:', e)
+    logError('[Autoplay] Fatal error:', e)
     await textChannel.send({
       embeds: [errorEmbed(`Autoplay error: ${e.message}`)]
     })

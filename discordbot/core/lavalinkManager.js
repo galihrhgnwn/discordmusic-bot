@@ -5,15 +5,21 @@ import { getConfig } from '../utils/serverConfig.js';
 import { isAutoplay, setAutoplay } from './autoplayManager.js';
 import { handleAutoplay } from './autoplay.js';
 import { keepJoinMap, clearIdleTimer, scheduleDisconnect, songStartMap, destroyConnection as destroyDefaultConnection, voiceChannelMap, textChannelMap } from './player.js';
+import { logInfo, logError } from '../utils/logger.js';
 
 let shoukaku = null;
 const lavalinkPlayers = new Map(); // guildId -> ShoukakuPlayer
 
 export function initLavalink(client) {
+    if (!process.env.LAVALINK_URL || !process.env.LAVALINK_AUTH) {
+        console.warn('[Lavalink] WARNING: LAVALINK_URL or LAVALINK_AUTH is not set in environment variables. Lavalink will not be initialized.');
+        return;
+    }
+
     const nodes = [{
         name: process.env.LAVALINK_NAME || 'Node 1',
-        url: process.env.LAVALINK_URL || 'localhost:2333',
-        auth: process.env.LAVALINK_AUTH || 'youshallnotpass',
+        url: process.env.LAVALINK_URL,
+        auth: process.env.LAVALINK_AUTH,
         secure: process.env.LAVALINK_SECURE === 'true'
     }];
 
@@ -22,8 +28,8 @@ export function initLavalink(client) {
         resume: false
     });
 
-    shoukaku.on('error', (_, error) => console.error('[Shoukaku] Error:', error));
-    shoukaku.on('ready', (name) => console.log(`[Shoukaku] Lavalink Node: ${name} is now connected`));
+    shoukaku.on('error', (_, error) => logError('[Shoukaku] Error:', error));
+    shoukaku.on('ready', (name) => logInfo(`[Shoukaku] Lavalink Node: ${name} is now connected`));
     shoukaku.on('disconnect', (name, count) => console.warn(`[Shoukaku] Lavalink Node: ${name} disconnected. Reconnecting in ${count} attempts`));
 }
 
@@ -65,13 +71,13 @@ export async function playSongLavalink(guildId, voiceChannel, textChannel, song)
                 const q = queue.getQueue(guildId);
                 q.unshift(current);
                 queue.queueMap.set(guildId, q);
-                return playSongLavalink(guildId, voiceChannelMap.get(guildId), textChannelMap.get(guildId), queue.getCurrentSong(guildId)).catch(console.error);
+                return playSongLavalink(guildId, voiceChannelMap.get(guildId), textChannelMap.get(guildId), queue.getCurrentSong(guildId)).catch(logError);
             }
 
             queue.skipSong(guildId);
 
             if (queue.getQueue(guildId).length > 0) {
-                return playSongLavalink(guildId, voiceChannelMap.get(guildId), textChannelMap.get(guildId), queue.getCurrentSong(guildId)).catch(console.error);
+                return playSongLavalink(guildId, voiceChannelMap.get(guildId), textChannelMap.get(guildId), queue.getCurrentSong(guildId)).catch(logError);
             }
 
             // Queue empty -> Autoplay check
@@ -94,13 +100,13 @@ export async function playSongLavalink(guildId, voiceChannel, textChannel, song)
         });
 
         player.on('error', (err) => {
-            console.error('[Lavalink Player] Error:', err);
+            logError('[Lavalink Player] Error:', err);
             textChannelMap.get(guildId)?.send({
                 embeds: [errorEmbed(`Lavalink Player error: ${err.message}`)]
             }).catch(() => {});
             queue.skipSong(guildId);
             const nextSong = queue.getCurrentSong(guildId);
-            if(nextSong) playSongLavalink(guildId, voiceChannelMap.get(guildId), textChannelMap.get(guildId), nextSong).catch(console.error);
+            if(nextSong) playSongLavalink(guildId, voiceChannelMap.get(guildId), textChannelMap.get(guildId), nextSong).catch(logError);
         });
     }
 
