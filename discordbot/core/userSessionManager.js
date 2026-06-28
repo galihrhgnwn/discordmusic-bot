@@ -10,7 +10,11 @@ Platform.shim.eval = async (data, env) => {
   if (env.n) properties.push(`n: exportedVars.nFunction("${env.n}")`)
   if (env.sig) properties.push(`sig: exportedVars.sigFunction("${env.sig}")`)
   const code = `${data.output}\nreturn { ${properties.join(', ')} }`
-  return vm.runInNewContext(`(function() { ${code} })()`, Object.create(null))
+  try {
+    return vm.runInNewContext(`(function() { ${code} })()`)
+  } catch {
+    return new Function(code)()
+  }
 }
 
 const USERS_DIR = path.resolve('./auth/users')
