@@ -166,8 +166,11 @@ async function main() {
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
     }
 
-    cleanupExpiredTokens();
-    setInterval(cleanupExpiredTokens, 60 * 60 * 1000);
+    // Run cleanup without blocking startup
+    cleanupExpiredTokens().catch(err => console.error('[PendingAuth] Initial cleanup error:', err));
+    setInterval(() => {
+        cleanupExpiredTokens().catch(err => console.error('[PendingAuth] Periodic cleanup error:', err));
+    }, 60 * 60 * 1000);
 
     await initSession();
     const loaded = await loadSavedCredentials();
