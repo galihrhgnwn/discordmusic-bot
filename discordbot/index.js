@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import fs from 'fs';
+import crypto from 'crypto';
 
 const [major] = process.versions.node.split('.').map(Number);
 if (major < 20) {
@@ -53,6 +54,31 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 app.get('/api/logs', (req, res) => {
+    const secret = req.query.secret || '';
+    const configuredSecret = process.env.DASHBOARD_SECRET || '';
+
+    // Check if DASHBOARD_SECRET is configured
+    if (!process.env.DASHBOARD_SECRET) {
+        return res.status(401).send('Unauthorized: DASHBOARD_SECRET not configured');
+    }
+
+    // Use timingSafeEqual to prevent timing attacks
+    let isAuthorized = false;
+    try {
+        const secretBuffer = Buffer.from(secret);
+        const configuredSecretBuffer = Buffer.from(configuredSecret);
+
+        if (secretBuffer.length === configuredSecretBuffer.length) {
+            isAuthorized = crypto.timingSafeEqual(secretBuffer, configuredSecretBuffer);
+        }
+    } catch (e) {
+        // Handle any buffer creation errors
+    }
+
+    if (!isAuthorized) {
+        return res.status(401).send('Unauthorized: Invalid DASHBOARD_SECRET');
+    }
+
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
