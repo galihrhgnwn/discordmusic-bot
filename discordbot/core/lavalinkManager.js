@@ -10,10 +10,15 @@ let shoukaku = null;
 const lavalinkPlayers = new Map(); // guildId -> ShoukakuPlayer
 
 export function initLavalink(client) {
+    if (!process.env.LAVALINK_URL || !process.env.LAVALINK_AUTH) {
+        console.warn('[Lavalink] WARNING: LAVALINK_URL or LAVALINK_AUTH is not set in environment variables. Lavalink will not be initialized.');
+        return;
+    }
+
     const nodes = [{
         name: process.env.LAVALINK_NAME || 'Node 1',
-        url: process.env.LAVALINK_URL || 'localhost:2333',
-        auth: process.env.LAVALINK_AUTH || 'youshallnotpass',
+        url: process.env.LAVALINK_URL,
+        auth: process.env.LAVALINK_AUTH,
         secure: process.env.LAVALINK_SECURE === 'true'
     }];
 
