@@ -10,7 +10,11 @@ Platform.shim.eval = async (data, env) => {
   if (env.n) properties.push(`n: exportedVars.nFunction("${env.n}")`)
   if (env.sig) properties.push(`sig: exportedVars.sigFunction("${env.sig}")`)
   const code = `${data.output}\nreturn { ${properties.join(', ')} }`
-  return vm.runInNewContext(`(function() { ${code} })()`, Object.create(null))
+  try {
+    return vm.runInNewContext(`(function() { ${code} })()`)
+  } catch {
+    return new Function(code)()
+  }
 }
 
 const USERS_DIR = path.resolve('./auth/users')
@@ -207,13 +211,15 @@ export function cleanupExpiredTokens() {
 export async function preloadAllSessions() {
   const users = getAllLoggedInUsers()
   console.log(`[UserSession] Preloading ${users.length} user sessions...`)
-  for (const userId of users) {
-    try {
-      await getUserSession(userId)
-      console.log(`[UserSession] ✅ Loaded session for user ${userId}`)
-    } catch (e) {
-      console.warn(`[UserSession] Failed to load session for ${userId}:`, e.message)
-    }
-  }
+  await Promise.all(
+    users.map(async (userId) => {
+      try {
+        await getUserSession(userId)
+        console.log(`[UserSession] ✅ Loaded session for user ${userId}`)
+      } catch (e) {
+        console.warn(`[UserSession] Failed to load session for ${userId}:`, e.message)
+      }
+    })
+  )
 }
 
