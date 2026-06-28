@@ -180,25 +180,37 @@ export function consumePendingAuth(token) {
 }
 
 // Cleanup expired tokens — panggil saat bot start
-export function cleanupExpiredTokens() {
+export async function cleanupExpiredTokens() {
   ensurePendingDir()
   try {
-    const files = fs.readdirSync(PENDING_DIR)
+    const files = await fs.promises.readdir(PENDING_DIR)
     let cleaned = 0
-    for (const file of files) {
-      try {
-        const data = JSON.parse(
-          fs.readFileSync(path.join(PENDING_DIR, file), 'utf-8')
-        )
-        if (Date.now() > data.expiresAt) {
-          fs.unlinkSync(path.join(PENDING_DIR, file))
-          cleaned++
+
+    // Process in batches
+    const BATCH_SIZE = 50
+    for (let i = 0; i < files.length; i += BATCH_SIZE) {
+      const batch = files.slice(i, i + BATCH_SIZE)
+      await Promise.all(batch.map(async (file) => {
+        const filePath = path.join(PENDING_DIR, file)
+        try {
+          const content = await fs.promises.readFile(filePath, 'utf-8')
+          const data = JSON.parse(content)
+          if (Date.now() > data.expiresAt) {
+            await fs.promises.unlink(filePath)
+            cleaned++
+          }
+        } catch (e) {
+          if (e.code !== 'ENOENT') {
+            try {
+              // File corrupt or parsing failed → hapus
+              await fs.promises.unlink(filePath)
+              cleaned++
+            } catch (err) {}
+          }
         }
-      } catch {
-        // File corrupt → hapus
-        fs.unlinkSync(path.join(PENDING_DIR, file))
-      }
+      }))
     }
+
     if (cleaned > 0) {
       console.log(`[PendingAuth] Cleaned ${cleaned} expired tokens`)
     }
@@ -211,13 +223,15 @@ export function cleanupExpiredTokens() {
 export async function preloadAllSessions() {
   const users = getAllLoggedInUsers()
   console.log(`[UserSession] Preloading ${users.length} user sessions...`)
-  for (const userId of users) {
-    try {
-      await getUserSession(userId)
-      console.log(`[UserSession] ✅ Loaded session for user ${userId}`)
-    } catch (e) {
-      console.warn(`[UserSession] Failed to load session for ${userId}:`, e.message)
-    }
-  }
+  await Promise.all(
+    users.map(async (userId) => {
+      try {
+        await getUserSession(userId)
+        console.log(`[UserSession] ✅ Loaded session for user ${userId}`)
+      } catch (e) {
+        console.warn(`[UserSession] Failed to load session for ${userId}:`, e.message)
+      }
+    })
+  )
 }
 

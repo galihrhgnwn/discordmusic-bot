@@ -14,6 +14,7 @@ import { isAutoplay, setAutoplay } from './autoplayManager.js'
 import { handleAutoplay } from './autoplay.js'
 import { getSource, setSource } from './audioSourceManager.js'
 import * as lavalinkManager from './lavalinkManager.js'
+import { logError } from '../utils/logger.js';
 
 export const playerMap       = new Map()   // guildId → AudioPlayer
 export const connectionMap   = new Map()   // guildId → VoiceConnection
@@ -143,7 +144,7 @@ export async function playSongDefault(guildId, voiceChannel, textChannel) {
     })
 
     player.on('error', (e) => {
-      console.error('[Player] Error:', e.message)
+      logError('[Player] Error:', e.message)
       textChannelMap.get(guildId)?.send({
         embeds: [errorEmbed(`Player error: ${e.message}`)]
       }).catch(() => {})
