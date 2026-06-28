@@ -36,23 +36,35 @@ async function handleYoutubeVideo(message, url) {
   } catch (e) {
     return message.reply({ embeds: [errorEmbed(e.message)] }).catch(() => {});
   }
-  const { quality } = getConfig(guildId);
+  const { quality, audioSource } = getConfig(guildId);
 
   const loading = await message.reply({ embeds: [infoEmbed('⏳ Loading...')] });
 
   try {
-    const info = await getVideoInfo(videoId);
-    const song = {
-      videoId: info.videoId,
-      title: info.title,
-      url: info.url,
-      duration: info.duration,
-      thumbnail: info.thumbnail,
-      requester: message.author.tag,
-      requesterId: message.author.id,
-      quality,
-      startTime
-    };
+    let song;
+    if (audioSource === 'lavalink') {
+        const { searchLavalink } = await import('../core/lavalinkManager.js');
+        const results = await searchLavalink(url);
+        if (!results.length) throw new Error('Video not found on Lavalink');
+        song = results[0];
+        song.requester = message.author.tag;
+        song.requesterId = message.author.id;
+        song.quality = quality;
+        song.startTime = startTime;
+    } else {
+        const info = await getVideoInfo(videoId);
+        song = {
+          videoId: info.videoId,
+          title: info.title,
+          url: info.url,
+          duration: info.duration,
+          thumbnail: info.thumbnail,
+          requester: message.author.tag,
+          requesterId: message.author.id,
+          quality,
+          startTime
+        };
+    }
 
     addToQueue(guildId, song);
 
@@ -82,32 +94,59 @@ async function handleYoutubePlaylist(message, url) {
   const loading = await message.reply({ embeds: [infoEmbed('⏳ Loading playlist...')] });
 
   try {
-    const list = await yts({ listId });
-    if (!list.videos || !list.videos.length) {
-      return loading.edit({ embeds: [errorEmbed('Playlist is empty or not found')] });
+    const { quality, audioSource } = getConfig(guildId);
+
+    let addedCount = 0;
+    let playlistTitle = '';
+    let totalCount = 0;
+
+    if (audioSource === 'lavalink') {
+        const { searchLavalink } = await import('../core/lavalinkManager.js');
+        const results = await searchLavalink(url);
+        if (!results.length) throw new Error('Playlist is empty or not found on Lavalink');
+
+        const tracks = results.slice(0, 50);
+        playlistTitle = tracks[0]?.title || 'Lavalink Playlist';
+        totalCount = results.length;
+        addedCount = tracks.length;
+
+        for (const v of tracks) {
+            v.requester = message.author.tag;
+            v.requesterId = message.author.id;
+            v.quality = quality;
+            v.startTime = null;
+            addToQueue(guildId, v);
+        }
+    } else {
+        const list = await yts({ listId });
+        if (!list.videos || !list.videos.length) {
+          return loading.edit({ embeds: [errorEmbed('Playlist is empty or not found')] });
+        }
+
+        const videos = list.videos.slice(0, 50);
+        playlistTitle = list.title;
+        totalCount = list.videos.length;
+        addedCount = videos.length;
+
+        for (const v of videos) {
+          addToQueue(guildId, {
+            videoId: v.videoId,
+            title: v.title,
+            url: `https://www.youtube.com/watch?v=${v.videoId}`,
+            duration: v.duration.seconds,
+            thumbnail: v.thumbnail?.url || '',
+            requester: message.author.tag,
+            requesterId: message.author.id,
+            quality,
+            startTime: null
+          });
+        }
     }
 
-    const { quality } = getConfig(guildId);
-    const videos = list.videos.slice(0, 50);
-
-    for (const v of videos) {
-      addToQueue(guildId, {
-        videoId: v.videoId,
-        title: v.title,
-        url: `https://www.youtube.com/watch?v=${v.videoId}`,
-        duration: v.duration.seconds,
-        thumbnail: v.thumbnail?.url || '',
-        requester: message.author.tag,
-        requesterId: message.author.id,
-        quality,
-        startTime: null
-      });
-    }
-
-    const note = videos.length < list.videos.length
-      ? ` (first 50 of ${list.videos.length})`
+    const note = addedCount < totalCount
+      ? ` (first ${addedCount} of ${totalCount})`
       : '';
-    await loading.edit({ embeds: [infoEmbed(`✅ Added ${videos.length} songs from **${list.title}**${note}`)] });
+    await loading.edit({ embeds: [infoEmbed(`✅ Added ${addedCount} songs from **${playlistTitle}**${note}`)] });
 
     const state = getPlayerState(guildId);
     if (state === 'disconnected' || state === 'idle') {
@@ -130,30 +169,45 @@ async function handleSpotify(message, url) {
   }
 
   try {
-    const results = await yts(query);
-    const top = results.videos.sort((a, b) => b.views - a.views)[0];
-    if (!top) {
-      return loading.edit({ embeds: [errorEmbed(`No YouTube match found for: ${query}`)] });
+    const guildId = message.guild.id;
+    const voiceChannel = message.member.voice.channel;
+    const { quality, audioSource } = getConfig(guildId);
+
+    let song;
+    if (audioSource === 'lavalink') {
+        const { searchLavalink } = await import('../core/lavalinkManager.js');
+        const results = await searchLavalink(query);
+        if (!results.length) {
+            return loading.edit({ embeds: [errorEmbed(`No match found on Lavalink for: ${query}`)] });
+        }
+        song = results[0];
+        song.requester = message.author.tag;
+        song.requesterId = message.author.id;
+        song.quality = quality;
+        song.startTime = null;
+        song.sourceNote = `Spotify → Lavalink: ${query}`;
+    } else {
+        const results = await yts(query);
+        const top = results.videos.sort((a, b) => b.views - a.views)[0];
+        if (!top) {
+          return loading.edit({ embeds: [errorEmbed(`No YouTube match found for: ${query}`)] });
+        }
+
+        song = {
+          videoId: top.videoId,
+          title: top.title,
+          url: top.url,
+          duration: top.duration.seconds,
+          thumbnail: top.thumbnail?.url || '',
+          requester: message.author.tag,
+          requesterId: message.author.id,
+          quality,
+          startTime: null,
+          sourceNote: `Spotify → YouTube: ${query}`
+        };
     }
 
     await loading.delete().catch(() => {});
-
-    const guildId = message.guild.id;
-    const voiceChannel = message.member.voice.channel;
-    const { quality } = getConfig(guildId);
-
-    const song = {
-      videoId: top.videoId,
-      title: top.title,
-      url: top.url,
-      duration: top.duration.seconds,
-      thumbnail: top.thumbnail?.url || '',
-      requester: message.author.tag,
-      requesterId: message.author.id,
-      quality,
-      startTime: null,
-      sourceNote: `Spotify → YouTube: ${query}`
-    };
 
     addToQueue(guildId, song);
 

@@ -133,7 +133,7 @@ export async function playSongLavalink(guildId, voiceChannel, textChannel, song)
 
     const { volume } = getConfig(guildId);
 
-    await player.playTrack({ track: trackToPlay });
+    await player.playTrack({ track: { encoded: trackToPlay } });
     await player.setGlobalVolume(volume);
     clearIdleTimer(guildId);
     songStartMap.set(guildId, Date.now());
