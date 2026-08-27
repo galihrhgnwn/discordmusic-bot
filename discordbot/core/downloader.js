@@ -7,36 +7,6 @@ const PYTUBE_API = process.env.PYTUBE_API_URL || 'http://dono-03.danbot.host:138
 
 export const sourceMap = new Map()
 
-// ─── Pilih itag audio terbaik ──────────────────────────────────
-
-function pickBestAudioItag(streams) {
-  const all = [
-    ...(streams.adaptive || []),
-    ...(streams.progressive || [])
-  ]
-
-  // Filter audio only
-  const audioOnly = all.filter(s =>
-    s.mime_type?.startsWith('audio/') &&
-    (s.resolution === null || s.resolution === undefined)
-  )
-
-  if (audioOnly.length > 0) {
-    // Sort by filesize_mb descending — terbesar = kualitas tertinggi
-    audioOnly.sort((a, b) => (b.filesize_mb || 0) - (a.filesize_mb || 0))
-    return audioOnly[0].itag
-  }
-
-  // Fallback: progressive terbesar
-  const progressive = all.filter(s => s.mime_type?.startsWith('video/'))
-  if (progressive.length > 0) {
-    progressive.sort((a, b) => (b.filesize_mb || 0) - (a.filesize_mb || 0))
-    return progressive[0].itag
-  }
-
-  return null
-}
-
 // ─── Get info via PytubeDL API ─────────────────────────────────
 
 async function getInfoFromAPI(videoId) {
@@ -58,122 +28,63 @@ async function getInfoFromAPI(videoId) {
   return data
 }
 
-// ─── Download via PytubeDL API ─────────────────────────────────
-
-// Helper: coba itag lain jika itag utama gagal
-function tryFallbackItag(streams, failedItag) {
-  const all = [
-    ...(streams.adaptive || []),
-    ...(streams.progressive || [])
-  ]
-  const audioOnly = all.filter(s =>
-    s.mime_type?.startsWith('audio/') &&
-    s.itag !== failedItag &&
-    (s.resolution === null || s.resolution === undefined)
-  )
-  audioOnly.sort((a, b) => (b.filesize_mb || 0) - (a.filesize_mb || 0))
-  return audioOnly[0]?.itag || null
-}
+// ─── Download audio via PytubeDL API ────────────────────────────
 
 async function downloadViaPytube(videoId) {
-  console.log(`[PytubeDL] Fetching info for ${videoId}`)
-
-  // Step 1: Get info dengan retry
-  let info
-  let retries = 2
-  while (retries >= 0) {
-    try {
-      info = await getInfoFromAPI(videoId)
-      break
-    } catch (e) {
-      if (retries === 0) throw e
-      console.warn(`[PytubeDL] /api/info failed, retrying... (${e.message})`)
-      await new Promise(r => setTimeout(r, 2000))
-      retries--
-    }
-  }
-
-  // Step 2: Pilih itag audio terbaik
-  const itag = pickBestAudioItag(info.streams)
-  if (!itag) {
-    throw new Error(`No suitable audio stream found for ${videoId}`)
-  }
-
-  console.log(`[PytubeDL] Selected itag: ${itag} for ${videoId}`)
-
-  // Step 3: Download dari /api/download
   const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`
-  const downloadUrl = `${PYTUBE_API}/api/download?url=${encodeURIComponent(youtubeUrl)}&itag=${itag}`
+  const downloadUrl = `${PYTUBE_API}/api/download/audio?url=${encodeURIComponent(youtubeUrl)}&format=m4a`
+  console.log(`[PytubeDL] Downloading audio for ${videoId}`)
 
   let res
-  retries = 2
+  let retries = 2
   while (retries >= 0) {
     try {
       res = await fetch(downloadUrl, {
         signal: AbortSignal.timeout(180000)
       })
-
-      if (res.status === 500) {
-        // 500 = pytubefix failed — coba itag lain
-        throw new Error(`HTTP 500 — trying fallback itag`)
-      }
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`)
-      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       break
     } catch (e) {
-      if (retries === 0) {
-        // Coba itag fallback sebelum throw
-        const fallbackItag = tryFallbackItag(info.streams, itag)
-        if (fallbackItag) {
-          console.warn(`[PytubeDL] Primary itag failed, trying fallback itag: ${fallbackItag}`)
-          const fallbackUrl = `${PYTUBE_API}/api/download?url=${encodeURIComponent(youtubeUrl)}&itag=${fallbackItag}`
-          res = await fetch(fallbackUrl, { signal: AbortSignal.timeout(180000) })
-          if (!res.ok) throw new Error(`Fallback also failed: HTTP ${res.status}`)
-        } else {
-          throw new Error(`Download failed: ${e.message}`)
-        }
-      } else {
-        await new Promise(r => setTimeout(r, 1000))
-        retries--
-      }
+      if (retries === 0) throw new Error(`Audio download failed: ${e.message}`)
+      console.warn(`[PytubeDL] /api/download/audio failed, retrying... (${e.message})`)
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      retries--
     }
   }
 
-  // Tentukan ekstensi dari content-type
   const contentType = res.headers.get('content-type') || ''
-  const ext = contentType.includes('webm') ? 'webm'
-    : contentType.includes('mp4') ? 'mp4'
-    : contentType.includes('audio') ? 'mp4'
-    : 'mp4'
-
+  const ext = contentType.includes('webm') ? 'webm' : 'm4a'
   const filePath = `./cache/${videoId}.${ext}`
-
-  // Step 4: Stream ke file
   const writeStream = fs.createWriteStream(filePath)
   const reader = res.body.getReader()
 
   await new Promise((resolve, reject) => {
     const pump = () => reader.read()
       .then(({ done, value }) => {
-        if (done) { writeStream.end(); resolve(); return }
-        writeStream.write(Buffer.from(value))
-        pump()
+        if (done) {
+          writeStream.end(resolve)
+          return
+        }
+        if (!writeStream.write(Buffer.from(value))) {
+          writeStream.once('drain', pump)
+        } else {
+          pump()
+        }
       })
-      .catch(err => { writeStream.destroy(); reject(err) })
+      .catch(error => {
+        writeStream.destroy()
+        reject(error)
+      })
     pump()
   })
 
-  // Validasi file
   if (!fs.existsSync(filePath) || fs.statSync(filePath).size < 10000) {
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
     throw new Error('Downloaded file too small or missing')
   }
 
   const sizeMB = (fs.statSync(filePath).size / 1024 / 1024).toFixed(2)
-  console.log(`[PytubeDL] ✅ ${videoId} — itag ${itag} — ${sizeMB}MB`)
-
+  console.log(`[PytubeDL] Downloaded ${videoId} — ${sizeMB}MB`)
   sourceMap.set(videoId, 'pytube')
   return { filePath }
 }

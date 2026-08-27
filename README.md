@@ -76,12 +76,13 @@ Slash command didaftarkan otomatis ke aplikasi Discord saat bot login. Karena re
 
 ## Backend Downloader
 
-Downloader memakai endpoint berikut pada backend PytubeDL:
+Downloader memakai endpoint audio resmi backend PytubeDL:
 
 ```text
-GET /api/info?url=<youtube-url>
-GET /api/download?url=<youtube-url>&itag=<itag>
+GET /api/download/audio?url=<youtube-url>&format=m4a
 ```
+
+Endpoint ini memilih dan mengunduh format audio langsung dari backend, sehingga bot tidak bergantung pada schema stream lama atau pemilihan `itag` secara lokal.
 
 Endpoint default dapat diganti tanpa mengubah source code:
 
