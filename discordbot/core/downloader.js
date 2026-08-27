@@ -7,7 +7,6 @@ const PYTUBE_API = process.env.PYTUBE_API_URL || 'http://dono-03.danbot.host:138
 
 export const sourceMap = new Map()
 
-// ─── Get info via PytubeDL API ─────────────────────────────────
 
 async function getInfoFromAPI(videoId) {
   const url = `https://www.youtube.com/watch?v=${videoId}`
@@ -28,7 +27,6 @@ async function getInfoFromAPI(videoId) {
   return data
 }
 
-// ─── Download audio via PytubeDL API ────────────────────────────
 
 async function downloadViaPytube(videoId) {
   const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`
@@ -84,12 +82,11 @@ async function downloadViaPytube(videoId) {
   }
 
   const sizeMB = (fs.statSync(filePath).size / 1024 / 1024).toFixed(2)
-  console.log(`[PytubeDL] Downloaded ${videoId} — ${sizeMB}MB`)
+  console.log(`[PytubeDL] Downloaded ${videoId}  ${sizeMB}MB`)
   sourceMap.set(videoId, 'pytube')
   return { filePath }
 }
 
-// ─── MAIN: downloadSong ────────────────────────────────────────
 
 export async function downloadSong(videoId, quality, startTime = null, requesterId = null) {
   if (hasCache(videoId)) {
@@ -106,7 +103,6 @@ export async function downloadSong(videoId, quality, startTime = null, requester
   }
 }
 
-// ─── getVideoInfo ──────────────────────────────────────────────
 
 export async function getVideoInfo(urlOrId) {
   let videoId
@@ -123,7 +119,6 @@ export async function getVideoInfo(urlOrId) {
 
   if (!videoId) throw new Error(`Cannot parse video ID from: ${urlOrId}`)
 
-  // Prioritas 1: PytubeDL API
   try {
     const info = await getInfoFromAPI(videoId)
     return {
@@ -138,7 +133,6 @@ export async function getVideoInfo(urlOrId) {
     console.warn('[getVideoInfo] PytubeDL failed, trying youtubei.js:', e.message)
   }
 
-  // Prioritas 2: youtubei.js
   try {
     const yt = getSession()
     const info = await yt.getBasicInfo(videoId)
@@ -154,7 +148,6 @@ export async function getVideoInfo(urlOrId) {
     console.warn('[getVideoInfo] youtubei.js failed, trying yt-search:', e.message)
   }
 
-  // Prioritas 3: yt-search
   const yts = (await import('yt-search')).default
   const result = await yts({ videoId })
   return {

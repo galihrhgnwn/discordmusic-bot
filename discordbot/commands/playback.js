@@ -31,7 +31,7 @@ export const playbackCommands = {
             return message.reply({ embeds: [errorEmbed("Nothing is playing")] });
         }
         pausePlayer(guildId);
-        await message.reply({ embeds: [infoEmbed("⏸ Paused")] });
+        await message.reply({ embeds: [infoEmbed(" Paused")] });
     }),
     resume: wrap('resume', async (message, args) => {
         const guildId = message.guild.id;
@@ -39,7 +39,7 @@ export const playbackCommands = {
             return message.reply({ embeds: [errorEmbed("Not paused")] });
         }
         resumePlayer(guildId);
-        await message.reply({ embeds: [infoEmbed("▶ Resumed")] });
+        await message.reply({ embeds: [infoEmbed(" Resumed")] });
     }),
     skip: wrap('skip', async (message, args) => {
         const guildId = message.guild.id;
@@ -47,34 +47,34 @@ export const playbackCommands = {
             return message.reply({ embeds: [errorEmbed("Nothing is playing")] });
         }
         skip(guildId);
-        await message.reply({ embeds: [infoEmbed("⏭ Skipped")] });
+        await message.reply({ embeds: [infoEmbed(" Skipped")] });
     }),
     stop: wrap('stop', async (message, args) => {
         const guildId = message.guild.id;
         stopPlayer(guildId);
-        await message.reply({ embeds: [infoEmbed("⏹ Stopped and queue cleared.")] });
+        await message.reply({ embeds: [infoEmbed(" Stopped and queue cleared.")] });
     }),
     loop: wrap('loop', async (message, args) => {
         const guildId = message.guild.id;
         const current = isLooping(guildId);
         setLoop(guildId, !current);
-        await message.reply({ embeds: [infoEmbed(`🔁 Loop: ${!current ? 'ON' : 'OFF'}`)] });
+        await message.reply({ embeds: [infoEmbed(` Loop: ${!current ? 'ON' : 'OFF'}`)] });
     }),
     volume: wrap('volume', async (message, args) => {
         const guildId = message.guild.id;
         const val = parseInt(args[0], 10);
         if (isNaN(val) || val < 1 || val > 100) {
-            return message.reply({ embeds: [errorEmbed("Volume must be 1–100")] });
+            return message.reply({ embeds: [errorEmbed("Volume must be 1100")] });
         }
         setVolume(guildId, val);
         setConfig(guildId, 'volume', val);
-        await message.reply({ embeds: [infoEmbed(`🔊 Volume: ${val}%`)] });
+        await message.reply({ embeds: [infoEmbed(` Volume: ${val}%`)] });
     }),
     quality: wrap('quality', async (message, args) => {
         const guildId = message.guild.id;
         const q = validateQuality(args[0]);
         setConfig(guildId, 'quality', q);
-        await message.reply({ embeds: [infoEmbed(`✅ Quality set to: ${q}`)] });
+        await message.reply({ embeds: [infoEmbed(` Quality set to: ${q}`)] });
     }),
     autoplay: wrap('autoplay', async (message, args) => {
         const guildId = message.guild.id;
@@ -83,8 +83,8 @@ export const playbackCommands = {
         const state = !current;
         await message.reply({ embeds: [infoEmbed(
             state
-                ? '✨ Autoplay: **ON** — Bot will keep playing related songs via YouTube Music algorithm'
-                : '⏹ Autoplay: **OFF**'
+                ? ' Autoplay: **ON**  Bot will keep playing related songs via YouTube Music algorithm'
+                : ' Autoplay: **OFF**'
         )] });
     }),
     now: wrap('now', async (message, args) => {
@@ -93,7 +93,7 @@ export const playbackCommands = {
         if (!song) {
             return message.reply({ embeds: [errorEmbed("Nothing is playing")] });
         }
-        
+
         const startTime = getSongStartTime(guildId);
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         const currentQueue = getQueue(guildId);
@@ -112,13 +112,13 @@ export const playbackCommands = {
         const guildId = message.guild.id;
         if (args[0]?.toLowerCase() === 'clear') {
             clearQueue(guildId);
-            return message.reply({ embeds: [infoEmbed("🗑 Queue cleared")] });
+            return message.reply({ embeds: [infoEmbed(" Queue cleared")] });
         }
         if (args[0]?.toLowerCase() === 'remove') {
             const index = parseInt(args[1], 10);
             try {
                 const removed = removeFromQueue(guildId, index);
-                return message.reply({ embeds: [infoEmbed(`✅ Removed: ${removed.title}`)] });
+                return message.reply({ embeds: [infoEmbed(` Removed: ${removed.title}`)] });
             } catch (e) {
                 return message.reply({ embeds: [errorEmbed(e.message)] });
             }
@@ -137,17 +137,17 @@ export const playbackCommands = {
             const start = (page - 1) * ITEMS_PER_PAGE;
             const end = start + ITEMS_PER_PAGE;
             const items = q.slice(start, end);
-            
+
             const lines = items.map((song, i) => {
                 const realIndex = start + i + 1;
-                const prefix = realIndex === 1 ? '▶ Now Playing:' : `${realIndex}.`;
-                return `**${prefix}** ${song.title} — \`${formatDuration(song.duration)}\` — ${song.requester}`;
+                const prefix = realIndex === 1 ? ' Now Playing:' : `${realIndex}.`;
+                return `**${prefix}** ${song.title}  \`${formatDuration(song.duration)}\`  ${song.requester}`;
             });
 
             return new EmbedBuilder()
                 .setTitle(`Queue for ${message.guild.name}`)
                 .setDescription(lines.join('\n'))
-                .setFooter({ text: `Page ${page}/${pages} • Total: ${q.length} songs` })
+                .setFooter({ text: `Page ${page}/${pages}  Total: ${q.length} songs` })
                 .setColor(0xFF0000);
         };
 
@@ -171,7 +171,7 @@ export const playbackCommands = {
         }
 
         const msg = await message.reply({ embeds: [generateEmbed(1)], components: [getRow(1)] });
-        
+
         const collector = msg.createMessageComponentCollector({ time: 60000 });
         collector.on('collect', async (i) => {
             if (i.user.id !== message.author.id) {
@@ -179,10 +179,10 @@ export const playbackCommands = {
             }
             if (i.customId === 'prev_page') currentPage--;
             if (i.customId === 'next_page') currentPage++;
-            
+
             await i.update({ embeds: [generateEmbed(currentPage)], components: [getRow(currentPage)] });
         });
-        
+
         collector.on('end', () => {
             msg.edit({ components: [] }).catch(() => {});
         });
@@ -190,7 +190,7 @@ export const playbackCommands = {
     shuffle: wrap('shuffle', async (message, args) => {
         const guildId = message.guild.id;
         shuffleQueue(guildId);
-        await message.reply({ embeds: [infoEmbed("🔀 Queue shuffled")] });
+        await message.reply({ embeds: [infoEmbed(" Queue shuffled")] });
     }),
     history: wrap('history', async (message, args) => {
         const guildId = message.guild.id;
@@ -198,14 +198,14 @@ export const playbackCommands = {
         if (h.length === 0) {
             return message.reply({ embeds: [errorEmbed("No history yet")] });
         }
-        
-        const lines = h.map((song, i) => `**[${i + 1}]** ${song.title} — \`${formatDuration(song.duration)}\` — ${song.requester}`);
+
+        const lines = h.map((song, i) => `**[${i + 1}]** ${song.title}  \`${formatDuration(song.duration)}\`  ${song.requester}`);
         const embed = new EmbedBuilder()
-            .setTitle('📜 Playback History')
+            .setTitle(' Playback History')
             .setDescription(lines.join('\n'))
             .setColor(0xFF0000)
             .setFooter({ text: 'smusic bot' });
-            
+
         await message.reply({ embeds: [embed] });
     })
 };

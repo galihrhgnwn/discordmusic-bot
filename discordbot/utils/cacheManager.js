@@ -10,7 +10,7 @@ if (!fs.existsSync(CACHE_DIR)) {
 
 export function hasCache(videoId) {
   const exts = ['mp4', 'webm', 'mp3', 'opus', 'ogg', 'm4a']
-  return exts.some(ext => 
+  return exts.some(ext =>
     fs.existsSync(path.join(CACHE_DIR, `${videoId}.${ext}`))
   )
 }

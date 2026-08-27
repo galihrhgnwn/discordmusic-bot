@@ -37,7 +37,7 @@ async function handleYoutubeVideo(message, url) {
   }
   const { quality } = getConfig(guildId);
 
-  const loading = await message.reply({ embeds: [infoEmbed('⏳ Loading...')] });
+  const loading = await message.reply({ embeds: [infoEmbed(' Loading...')] });
 
   try {
     const info = await getVideoInfo(videoId);
@@ -57,7 +57,7 @@ async function handleYoutubeVideo(message, url) {
 
     const state = getPlayerState(guildId);
     if (state === 'playing' || state === 'paused') {
-      await loading.edit({ embeds: [infoEmbed(`✅ Added to queue: **${song.title}**`)] });
+      await loading.edit({ embeds: [infoEmbed(` Added to queue: **${song.title}**`)] });
     } else {
       await loading.delete().catch(() => {});
       await playSong(guildId, voiceChannel, message.channel);
@@ -78,7 +78,7 @@ async function handleYoutubePlaylist(message, url) {
   } catch(e) {
     return message.reply({ embeds: [errorEmbed(e.message)] }).catch(() => {});
   }
-  const loading = await message.reply({ embeds: [infoEmbed('⏳ Loading playlist...')] });
+  const loading = await message.reply({ embeds: [infoEmbed(' Loading playlist...')] });
 
   try {
     const list = await yts({ listId });
@@ -106,7 +106,7 @@ async function handleYoutubePlaylist(message, url) {
     const note = videos.length < list.videos.length
       ? ` (first 50 of ${list.videos.length})`
       : '';
-    await loading.edit({ embeds: [infoEmbed(`✅ Added ${videos.length} songs from **${list.title}**${note}`)] });
+    await loading.edit({ embeds: [infoEmbed(` Added ${videos.length} songs from **${list.title}**${note}`)] });
 
     const state = getPlayerState(guildId);
     if (state === 'disconnected' || state === 'idle') {
@@ -119,7 +119,7 @@ async function handleYoutubePlaylist(message, url) {
 
 async function handleSpotify(message, url) {
   if (!preCheck(message)) return;
-  const loading = await message.reply({ embeds: [infoEmbed('⏳ Finding Spotify track on YouTube...')] });
+  const loading = await message.reply({ embeds: [infoEmbed(' Finding Spotify track on YouTube...')] });
 
   let query;
   try {
@@ -151,14 +151,14 @@ async function handleSpotify(message, url) {
       requesterId: message.author.id,
       quality,
       startTime: null,
-      sourceNote: `Spotify → YouTube: ${query}`
+      sourceNote: `Spotify  YouTube: ${query}`
     };
 
     addToQueue(guildId, song);
 
     const state = getPlayerState(guildId);
     if (state === 'playing' || state === 'paused') {
-      message.channel.send({ embeds: [infoEmbed(`✅ Added to queue: **${song.title}**\n*Matched from Spotify track: ${query}*`)] }).catch(() => {});
+      message.channel.send({ embeds: [infoEmbed(` Added to queue: **${song.title}**\n*Matched from Spotify track: ${query}*`)] }).catch(() => {});
     } else {
       playSong(guildId, voiceChannel, message.channel);
     }
@@ -178,16 +178,16 @@ async function handleSearch(message, input) {
 
     const desc = results.map((v, i) => {
       const dur = v.durationStr || '?:??'
-      const viewStr = v.views ? ` • ${v.views}` : ''
-      const authorStr = v.author ? `${v.author} • ` : ''
-      return `**${i + 1}.** ${v.title}\n└ ${authorStr}${dur}${viewStr}`
+      const viewStr = v.views ? `  ${v.views}` : ''
+      const authorStr = v.author ? `${v.author}  ` : ''
+      return `**${i + 1}.** ${v.title}\n ${authorStr}${dur}${viewStr}`
     }).join('\n\n');
 
     const embed = new EmbedBuilder()
-      .setTitle('🔍 Search Results')
+      .setTitle(' Search Results')
       .setDescription(desc)
       .setColor(0xFF0000)
-      .setFooter({ text: 'Pick a song • Times out in 30s • smusic bot' });
+      .setFooter({ text: 'Pick a song  Times out in 30s  smusic bot' });
 
     const buttons = results.map((_, i) =>
       new ButtonBuilder()
@@ -231,7 +231,7 @@ async function handleSearch(message, input) {
 
       const state = getPlayerState(guildId);
       if (state === 'playing' || state === 'paused') {
-        message.channel.send({ embeds: [infoEmbed(`✅ Added to queue: **${song.title}**`)] }).catch(() => {});
+        message.channel.send({ embeds: [infoEmbed(` Added to queue: **${song.title}**`)] }).catch(() => {});
       } else {
         playSong(guildId, voiceChannel, message.channel);
       }

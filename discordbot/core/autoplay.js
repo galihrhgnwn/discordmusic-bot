@@ -21,7 +21,7 @@ function isMusicContent(item) {
 export async function handleAutoplay(guildId, voiceChannel, textChannel, lastSong, requesterId = null) {
   try {
     await textChannel.send({
-      embeds: [infoEmbed('🎵 Finding next song via YouTube Music algorithm...')]
+      embeds: [infoEmbed(' Finding next song via YouTube Music algorithm...')]
     })
 
     const yt = requesterId
@@ -30,7 +30,6 @@ export async function handleAutoplay(guildId, voiceChannel, textChannel, lastSon
 
     let relatedSongs = []
 
-    // Prioritas 1: YouTube Music getWatchPlaylist (radio mode)
     try {
       const watchPlaylist = await yt.music.getWatchPlaylist({
         videoId: lastSong.videoId,
@@ -39,7 +38,7 @@ export async function handleAutoplay(guildId, voiceChannel, textChannel, lastSon
 
       const tracks = watchPlaylist?.tracks || []
       relatedSongs = tracks
-        .slice(1, 6)  // skip index 0 = lagu yang barusan diputar
+        .slice(1, 6)
         .filter(t => t.id)
         .map(t => ({
           videoId: t.id,
@@ -56,7 +55,6 @@ export async function handleAutoplay(guildId, voiceChannel, textChannel, lastSon
       console.warn('[Autoplay] getWatchPlaylist failed:', e.message)
     }
 
-    // Prioritas 2: YouTube watch_next_feed
     if (!relatedSongs.length) {
       try {
         const info = await yt.getInfo(lastSong.videoId)
@@ -79,7 +77,6 @@ export async function handleAutoplay(guildId, voiceChannel, textChannel, lastSon
       }
     }
 
-    // Prioritas 3: yt-search fallback
     if (!relatedSongs.length) {
       try {
         const r = await yts(`${lastSong.title} official audio`)
@@ -102,7 +99,7 @@ export async function handleAutoplay(guildId, voiceChannel, textChannel, lastSon
 
     if (!relatedSongs.length) {
       await textChannel.send({
-        embeds: [errorEmbed('❌ Could not find related songs for autoplay.')]
+        embeds: [errorEmbed(' Could not find related songs for autoplay.')]
       })
       destroyConnection(guildId)
       return
@@ -110,7 +107,6 @@ export async function handleAutoplay(guildId, voiceChannel, textChannel, lastSon
 
     const { quality } = getConfig(guildId)
 
-    // Add max 3 lagu ke queue
     for (const s of relatedSongs.slice(0, 3)) {
       addToQueue(guildId, {
         videoId: s.videoId,
@@ -118,7 +114,7 @@ export async function handleAutoplay(guildId, voiceChannel, textChannel, lastSon
         url: s.url,
         duration: s.duration,
         thumbnail: s.thumbnail,
-        requester: '🤖 Autoplay',
+        requester: ' Autoplay',
         quality,
         startTime: null
       })

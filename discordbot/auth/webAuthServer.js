@@ -53,7 +53,6 @@ async function handleCookieSubmission(req, res) {
       accountName = item?.account_name || item?.name || item?.channel_handle || accountName
       accountEmail = item?.email || item?.account_byline || ''
     } catch {
-      // A valid cookie may not expose account metadata; the session is still usable.
     }
 
     saveUserCookie(userId, cookie, {

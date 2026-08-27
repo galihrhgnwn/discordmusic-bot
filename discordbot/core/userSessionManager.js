@@ -4,7 +4,6 @@ import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
 
-// Set eval (aman dipanggil berkali-kali)
 Platform.shim.eval = async (data, env) => {
   const properties = []
   if (env.n) properties.push(`n: exportedVars.nFunction("${env.n}")`)
@@ -19,7 +18,7 @@ Platform.shim.eval = async (data, env) => {
 
 const USERS_DIR = path.resolve('./auth/users')
 
-const sessionMap = new Map()  // discordUserId → Innertube instance
+const sessionMap = new Map()
 
 function getUserDir(userId) {
   return path.join(USERS_DIR, userId)
@@ -52,12 +51,10 @@ export function getUserProfile(userId) {
 }
 
 export async function getUserSession(userId) {
-  // Cek cache session
   if (sessionMap.has(userId)) {
     return sessionMap.get(userId)
   }
 
-  // Load cookies jika ada
   if (fs.existsSync(getCookieFile(userId))) {
     try {
       const { cookie } = JSON.parse(fs.readFileSync(getCookieFile(userId), 'utf-8'))
@@ -73,7 +70,6 @@ export async function getUserSession(userId) {
     }
   }
 
-  // Load dari OAuth file jika ada
   if (fs.existsSync(getCredsFile(userId))) {
     const yt = await Innertube.create({
       cache: new UniversalCache(true, `./auth/users/${userId}/.ytcache`),
@@ -100,8 +96,7 @@ export function saveUserCredentials(userId, credentials, profile) {
   fs.writeFileSync(getCredsFile(userId), JSON.stringify(credentials, null, 2))
   fs.writeFileSync(getProfileFile(userId), JSON.stringify(profile, null, 2))
 
-  // Update session cache
-  sessionMap.delete(userId)  // force reload next time
+  sessionMap.delete(userId)
 }
 
 export function saveUserCookie(userId, cookieString, profile) {
@@ -110,8 +105,7 @@ export function saveUserCookie(userId, cookieString, profile) {
 
   fs.writeFileSync(getCookieFile(userId), JSON.stringify({ cookie: cookieString }, null, 2))
   fs.writeFileSync(getProfileFile(userId), JSON.stringify(profile, null, 2))
-  
-  // Update session cache
+
   sessionMap.delete(userId)
 }
 
@@ -129,7 +123,6 @@ export function getAllLoggedInUsers() {
     .filter(id => hasCredentials(id))
 }
 
-// ─── PENDING AUTH (For Cookie Login) ──────────────────────────
 
 const PENDING_DIR = path.resolve('./auth/pending')
 
@@ -146,7 +139,7 @@ export function createPendingAuth(userId) {
   fs.writeFileSync(filePath, JSON.stringify({
     userId,
     createdAt: Date.now(),
-    expiresAt: Date.now() + 30 * 60 * 1000  // 30 menit
+    expiresAt: Date.now() + 30 * 60 * 1000
   }))
   return token
 }
@@ -179,7 +172,6 @@ export function consumePendingAuth(token) {
   return userId
 }
 
-// Cleanup expired tokens — panggil saat bot start
 export function cleanupExpiredTokens() {
   ensurePendingDir()
   try {
@@ -195,7 +187,6 @@ export function cleanupExpiredTokens() {
           cleaned++
         }
       } catch {
-        // File corrupt → hapus
         fs.unlinkSync(path.join(PENDING_DIR, file))
       }
     }
@@ -207,17 +198,15 @@ export function cleanupExpiredTokens() {
   }
 }
 
-// Preload semua user sessions saat bot start
 export async function preloadAllSessions() {
   const users = getAllLoggedInUsers()
   console.log(`[UserSession] Preloading ${users.length} user sessions...`)
   for (const userId of users) {
     try {
       await getUserSession(userId)
-      console.log(`[UserSession] ✅ Loaded session for user ${userId}`)
+      console.log(`[UserSession]  Loaded session for user ${userId}`)
     } catch (e) {
       console.warn(`[UserSession] Failed to load session for ${userId}:`, e.message)
     }
   }
 }
-

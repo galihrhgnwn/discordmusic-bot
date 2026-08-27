@@ -13,35 +13,32 @@ import { getConfig } from '../utils/serverConfig.js'
 import { isAutoplay, setAutoplay } from './autoplayManager.js'
 import { handleAutoplay } from './autoplay.js'
 
-export const playerMap       = new Map()   // guildId → AudioPlayer
-export const connectionMap   = new Map()   // guildId → VoiceConnection
-export const idleTimerMap    = new Map()   // guildId → Timeout
-export const songStartMap    = new Map()   // guildId → Date.now()
-export const voiceChannelMap = new Map()   // guildId → VoiceChannel
-export const textChannelMap  = new Map()   // guildId → TextChannel
-export const keepJoinMap     = new Map()   // keepJoin functionality
+export const playerMap       = new Map()
+export const connectionMap   = new Map()
+export const idleTimerMap    = new Map()
+export const songStartMap    = new Map()
+export const voiceChannelMap = new Map()
+export const textChannelMap  = new Map()
+export const keepJoinMap     = new Map()
 
-// Detect format dari ekstensi file
 function getStreamType(filePath) {
   if (!filePath) return StreamType.Arbitrary
   if (filePath.endsWith('.webm')) return StreamType.WebmOpus
   if (filePath.endsWith('.opus')) return StreamType.OggOpus
-  return StreamType.Arbitrary   // mp4/m4a/mp3
+  return StreamType.Arbitrary
 }
 
 export async function playSong(guildId, voiceChannel, textChannel) {
   const song = queue.getCurrentSong(guildId)
   if (!song) {
-    textChannel.send({ embeds: [infoEmbed('✅ Queue ended.')] }).catch(() => {})
+    textChannel.send({ embeds: [infoEmbed(' Queue ended.')] }).catch(() => {})
     scheduleDisconnect(guildId, textChannel)
     return
   }
 
-  // Simpan channel references untuk autoplay
   voiceChannelMap.set(guildId, voiceChannel)
   textChannelMap.set(guildId, textChannel)
 
-  // Join voice channel
   let connection = connectionMap.get(guildId)
   if (!connection || connection.state.status === VoiceConnectionStatus.Destroyed) {
     connection = joinVoiceChannel({
@@ -52,19 +49,17 @@ export async function playSong(guildId, voiceChannel, textChannel) {
     connectionMap.set(guildId, connection)
   }
 
-  // Download audio
   let downloadResult
   try {
     const { sourceMap } = await import('./downloader.js')
     downloadResult = await downloadSong(song.videoId, song.quality, song.startTime, song.requesterId)
     song.source = sourceMap.get(song.videoId) || 'unknown'
   } catch (e) {
-    textChannel.send({ embeds: [errorEmbed(`❌ Download failed: ${e.message}`)] }).catch(() => {})
+    textChannel.send({ embeds: [errorEmbed(` Download failed: ${e.message}`)] }).catch(() => {})
     queue.skipSong(guildId)
     return playSong(guildId, voiceChannel, textChannel)
   }
 
-  // Create or reuse AudioPlayer
   let player = playerMap.get(guildId)
   if (!player) {
     player = createAudioPlayer()
@@ -99,7 +94,6 @@ export async function playSong(guildId, voiceChannel, textChannel) {
         )
       }
 
-      // Queue kosong → cek autoplay
       if (isAutoplay(guildId) && finishedSong) {
         await handleAutoplay(
           guildId,
@@ -110,7 +104,7 @@ export async function playSong(guildId, voiceChannel, textChannel) {
         )
       } else {
         textChannelMap.get(guildId)?.send({
-          embeds: [infoEmbed('✅ Queue ended.')]
+          embeds: [infoEmbed(' Queue ended.')]
         }).catch(() => {})
         scheduleDisconnect(guildId, textChannelMap.get(guildId))
       }
@@ -130,16 +124,15 @@ export async function playSong(guildId, voiceChannel, textChannel) {
     })
   }
 
-  // Apply volume
   const { volume } = getConfig(guildId)
-  
+
   const filePath = downloadResult.filePath
   if (!filePath || !fs.existsSync(filePath)) {
     throw new Error(`Audio file not found: ${filePath}`)
   }
   const input = createReadStream(filePath)
   const streamType = getStreamType(filePath)
-  
+
   const resource = createAudioResource(input, {
     inputType: streamType,
     inlineVolume: true
@@ -152,17 +145,14 @@ export async function playSong(guildId, voiceChannel, textChannel) {
   connection.subscribe(player)
   clearIdleTimer(guildId)
 
-  // Catat waktu mulai lagu
   songStartMap.set(guildId, Date.now())
 
-  // Pre-download lagu berikutnya di background
   const nextSong = queue.getQueue(guildId)[1]
   if (nextSong) {
     downloadSong(nextSong.videoId, nextSong.quality, nextSong.startTime, nextSong.requesterId)
       .catch(e => console.warn('[Player] Pre-download failed:', e.message))
   }
 
-  // Kirim Now Playing embed dengan metadata lengkap
   const currentQueue = queue.getQueue(guildId)
   const extra = {
     loop: queue.isLooping(guildId),
@@ -187,14 +177,14 @@ export function resumePlayer(guildId) {
 export function stopPlayer(guildId) {
   playerMap.get(guildId)?.stop()
   queue.clearQueue(guildId)
-  setAutoplay(guildId, false)   // reset autoplay saat stop
+  setAutoplay(guildId, false)
   destroyConnection(guildId)
 }
 
 export function skip(guildId) {
     const player = playerMap.get(guildId);
     if (player) {
-        player.stop(); // Triggers idle event naturally
+        player.stop();
     } else {
         queue.skipSong(guildId);
     }
@@ -237,7 +227,7 @@ export function scheduleDisconnect(guildId, textChannel) {
   if (keepJoinMap.get(guildId)) return;
   const timer = setTimeout(() => {
     destroyConnection(guildId)
-    textChannel?.send({ embeds: [infoEmbed('👋 Disconnected due to inactivity.')] }).catch(() => {})
+    textChannel?.send({ embeds: [infoEmbed(' Disconnected due to inactivity.')] }).catch(() => {})
   }, 5 * 60 * 1000)
   idleTimerMap.set(guildId, timer)
 }

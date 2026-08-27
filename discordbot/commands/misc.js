@@ -34,7 +34,7 @@ export async function handleDownload(message, args) {
 
     try {
         await message.channel.send({
-            content: `🎵 **${song.title}**`,
+            content: ` **${song.title}**`,
             files: [{ attachment: filePath, name: `${song.title.replace(/[^\w\s]/g, '')}.mp3` }]
         });
     } catch (e) {
@@ -50,7 +50,7 @@ export async function handleRecommend(message, args) {
         return message.reply({ embeds: [errorEmbed(`Wait ${getRemainingSeconds(userId, commandName)} more second(s)`)] }).catch(() => {});
     }
     setCooldown(userId, commandName);
-    
+
     if (!message.member?.voice?.channel) {
         return message.reply({ embeds: [errorEmbed('Join a voice channel first')] }).catch(() => {});
     }
@@ -59,7 +59,7 @@ export async function handleRecommend(message, args) {
     const song = getCurrentSong(guildId);
     if (!song) return message.reply({ embeds: [errorEmbed('Nothing is currently playing')] }).catch(() => {});
 
-    const loading = await message.reply({ embeds: [infoEmbed('⏳ Finding recommendations...')] }).catch(() => null);
+    const loading = await message.reply({ embeds: [infoEmbed(' Finding recommendations...')] }).catch(() => null);
 
     let info;
     try {
@@ -82,14 +82,14 @@ export async function handleRecommend(message, args) {
     }
 
     const desc = related.map((v, i) =>
-        `**${i + 1}.** ${v.title?.text || 'Unknown'}\n└ ${v.author?.name || ''} • ${v.duration?.text || '?'}`
+        `**${i + 1}.** ${v.title?.text || 'Unknown'}\n ${v.author?.name || ''}  ${v.duration?.text || '?'}`
     ).join('\n\n');
 
     const embed = new EmbedBuilder()
-        .setTitle('🎯 Recommended Songs')
+        .setTitle(' Recommended Songs')
         .setDescription(desc)
         .setColor(0xFF0000)
-        .setFooter({ text: 'Pick a song • Times out in 30s • smusic bot' });
+        .setFooter({ text: 'Pick a song  Times out in 30s  smusic bot' });
 
     const buttons = related.map((_, i) =>
         new ButtonBuilder()
@@ -98,7 +98,7 @@ export async function handleRecommend(message, args) {
             .setStyle(ButtonStyle.Secondary)
     );
     const row = new ActionRowBuilder().addComponents(buttons);
-    
+
     const reply = await loading.edit({ embeds: [embed], components: [row] }).catch(() => null);
     if (!reply) return;
 
@@ -133,7 +133,7 @@ export async function handleRecommend(message, args) {
             if (getPlayerState(guildId) !== 'playing' && getPlayerState(guildId) !== 'paused') {
                 playSong(guildId, message.member.voice.channel, message.channel);
             } else {
-                message.channel.send({ embeds: [infoEmbed(`✅ Added to queue: **${picked.title?.text}**`)] }).catch(() => {});
+                message.channel.send({ embeds: [infoEmbed(` Added to queue: **${picked.title?.text}**`)] }).catch(() => {});
             }
         } catch (e) {
             console.error('[Recommend]', e);
@@ -152,71 +152,71 @@ export async function handleRecommend(message, args) {
 
 export async function handleHelp(message, args) {
     const embed = new EmbedBuilder()
-        .setTitle('📖 smusic bot — Commands')
+        .setTitle(' smusic bot  Commands')
         .setColor(0xFF0000)
         .setFooter({ text: 'smusic bot' })
         .addFields(
             {
-                name: '🔍 Search & Play',
+                name: ' Search & Play',
                 value: [
-                    '`/play <link>` — Play YouTube or Spotify link',
-                    '`/play <judul>` — Search and pick a song',
-                    '`/play artist: X` — Search by artist name',
-                    '`/play short: X` — Songs under 5 minutes',
-                    '`/play long: X` — Songs over 10 minutes',
+                    '`/play <link>`  Play YouTube or Spotify link',
+                    '`/play <judul>`  Search and pick a song',
+                    '`/play artist: X`  Search by artist name',
+                    '`/play short: X`  Songs under 5 minutes',
+                    '`/play long: X`  Songs over 10 minutes',
                 ].join('\n')
             },
             {
-                name: '📊 Charts',
-                value: '`/chart` — Trending songs with region & genre filter'
+                name: ' Charts',
+                value: '`/chart`  Trending songs with region & genre filter'
             },
             {
-                name: '⏯ Playback',
+                name: ' Playback',
                 value: [
                     '`/pause` / `resume` / `skip` / `stop`',
-                    '`/loop` — Toggle loop',
-                    '`/autoplay` — Toggle autoplay via YouTube algorithm',
+                    '`/loop`  Toggle loop',
+                    '`/autoplay`  Toggle autoplay via YouTube algorithm',
                     '`/volume <1-100>`',
                     '`/quality <low|medium|high|lossless>`',
-                    '`/keepjoin` — 24/7 Voice Channel',
-                    '`/quitjoin` — Disable 24/7 mode',
+                    '`/keepjoin`  24/7 Voice Channel',
+                    '`/quitjoin`  Disable 24/7 mode',
                 ].join('\n')
             },
             {
-                name: '📋 Queue',
+                name:                     'Queue',
                 value: [
-                    '`/queue view` — View queue (paginated)',
-                    '`/queue clear` / `remove <nomor>`',
+                    '`/queue view`  View queue (paginated)',
+                    '`/queue clear` / `remove <number>`',
                     '`/shuffle`',
                 ].join('\n')
             },
             {
-                name: '💾 Playlist (login required)',
+                name: 'Playlist (login required)',
                 value: [
-                    '`/playlist list` — List your YouTube Music playlists',
-                    '`/playlist play <nama>` — Play a playlist from your library',
-                    '`/playlist search <nama>` — Search YouTube Music playlists',
-                    '\n*Note: Playlist diambil langsung dari akun YouTube Music kamu.*',
-                    '*Run /auth login untuk connect akun.*'
+                    '`/playlist list`  List your YouTube Music playlists',
+                    '`/playlist play <name>` - Play a playlist from your library',
+                    '`/playlist search <name>` - Search YouTube Music playlists',
+                    '\n*Note: Playlists are loaded directly from your YouTube Music account.*',
+                    '*Run /auth login to connect your account.*'
                 ].join('\n')
             },
             {
-                name: 'ℹ️ Info & Misc',
+                name: 'Info and Misc',
                 value: [
-                    '`/now` — Current song info',
-                    '`/history` — Last 10 played songs',
-                    '`/download` — Download current song',
-                    '`/recommend` — Get song recommendations',
-                    '`/help` — This menu',
+                    '`/now`  Current song info',
+                    '`/history`  Last 10 played songs',
+                    '`/download`  Download current song',
+                    '`/recommend`  Get song recommendations',
+                    '`/help`  This menu',
                 ].join('\n')
             },
             {
-                name: '🔐 Auth',
+                name: 'Authentication',
                 value: [
-                    '`/auth login` — Connect akun YouTube kamu (personal)',
-                    '`/auth status` — Cek status koneksi',
-                    '`/auth logout` — Disconnect akun',
-                    '\n*Login bersifat opsional tapi memberikan rekomendasi musik yang lebih personal berdasarkan akun YouTube kamu.*'
+                    '`/auth login` - Connect your personal YouTube account',
+                    '`/auth status` - Check your connection status',
+                    '`/auth logout` - Disconnect your account',
+                    '\n*Login is optional but enables more personal recommendations based on your YouTube account.*'
                 ].join('\n')
             }
         );
@@ -227,20 +227,18 @@ export async function handleHelp(message, args) {
 export async function handleKeepJoin(message, args) {
     const guildId = message.guild.id;
     keepJoinMap.set(guildId, true);
-    message.reply({ embeds: [infoEmbed('✅ **24/7 mode enabled.** I will stay in the voice channel even when idle.')] }).catch(() => {});
+    message.reply({ embeds: [infoEmbed(' **24/7 mode enabled.** I will stay in the voice channel even when idle.')] }).catch(() => {});
 }
 
 export async function handleQuitJoin(message, args) {
     const guildId = message.guild.id;
     keepJoinMap.set(guildId, false);
-    
-    // If not playing, optionally trigger disconnect timer immediately, or just let it be.
-    // We'll call scheduleDisconnect manually if it's currently idle.
+
     if (getPlayerState(guildId) === 'idle' || getPlayerState(guildId) === 'disconnected') {
         clearIdleTimer(guildId);
         destroyConnection(guildId);
-        message.reply({ embeds: [infoEmbed('👋 **24/7 mode disabled.** Disconnected because I was idle.')] }).catch(() => {});
+        message.reply({ embeds: [infoEmbed(' **24/7 mode disabled.** Disconnected because I was idle.')] }).catch(() => {});
     } else {
-        message.reply({ embeds: [infoEmbed('❌ **24/7 mode disabled.** I will leave when the queue ends.')] }).catch(() => {});
+        message.reply({ embeds: [infoEmbed(' **24/7 mode disabled.** I will leave when the queue ends.')] }).catch(() => {});
     }
 }

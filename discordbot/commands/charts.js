@@ -12,11 +12,11 @@ import {
 import { userInVoice, botCanJoin } from '../utils/checkPermissions.js'
 
 const REGIONS = {
-  'ID': '🇮🇩 Indonesia',
-  'US': '🇺🇸 United States',
-  'JP': '🇯🇵 Japan',
-  'KR': '🇰🇷 South Korea',
-  'GB': '🇬🇧 United Kingdom'
+  'ID': ' Indonesia',
+  'US': ' United States',
+  'JP': ' Japan',
+  'KR': ' South Korea',
+  'GB': ' United Kingdom'
 }
 
 const GENRES = ['All', 'Pop', 'Hip-Hop', 'R&B', 'Rock', 'Electronic']
@@ -24,9 +24,7 @@ const GENRES = ['All', 'Pop', 'Hip-Hop', 'R&B', 'Rock', 'Electronic']
 const REFRESH_COOLDOWN = 30 * 1000
 const chartStateMap = new Map()
 
-// Fetch trending music dari YouTube
 async function fetchTrending(region = 'ID') {
-  // Prioritas 1: YouTube Music charts via InnerTube
   try {
     const yt = getSession()
     const charts = await yt.music.getCharts(region)
@@ -46,7 +44,6 @@ async function fetchTrending(region = 'ID') {
     console.warn('[Charts] YouTube Music getCharts failed:', e.message)
   }
 
-  // Prioritas 2: YouTube getTrending via InnerTube
   try {
     const yt = getSession()
     const trending = await yt.getTrending()
@@ -72,7 +69,6 @@ async function fetchTrending(region = 'ID') {
     console.warn('[Charts] getTrending failed:', e.message)
   }
 
-  // Prioritas 3: yt-search fallback
   const REGION_QUERY = {
     'ID': 'trending musik indonesia 2025',
     'US': 'trending music usa 2025',
@@ -121,16 +117,16 @@ function buildChartEmbed(state) {
     const dur = s.duration > 0
       ? `${Math.floor(s.duration / 60)}:${String(s.duration % 60).padStart(2, '0')}`
       : '?:??'
-    return `**${i + 1}.** ${s.title}\n└ ${s.author} • ${dur} ${s.views ? '• ' + s.views : ''}`
+    return `**${i + 1}.** ${s.title}\n ${s.author}  ${dur} ${s.views ? ' ' + s.views : ''}`
   }).join('\n\n')
 
   return new EmbedBuilder()
-    .setTitle(`🎵 Trending Music — ${regionName}`)
+    .setTitle(` Trending Music  ${regionName}`)
     .setDescription(desc || 'No results')
     .setColor(0xFF0000)
     .setFooter({
       text: state.genre && state.genre !== 'All'
-        ? `Genre: ${state.genre} • smusic bot`
+        ? `Genre: ${state.genre}  smusic bot`
         : 'smusic bot'
     })
 }
@@ -152,12 +148,12 @@ function buildChartComponents(state) {
 
   const refreshBtn = new ButtonBuilder()
     .setCustomId('chart_refresh')
-    .setLabel('🔄 Refresh')
+    .setLabel(' Refresh')
     .setStyle(ButtonStyle.Secondary)
 
   const playAllBtn = new ButtonBuilder()
     .setCustomId('chart_play_all')
-    .setLabel('▶ Play All')
+    .setLabel(' Play All')
     .setStyle(ButtonStyle.Primary)
 
   const songOptions = state.filtered.slice(0, 10).map((s, i) =>
@@ -195,17 +191,17 @@ export async function handleChart(message, args) {
 
   const guildId = message.guild.id
   const { defaultRegion } = getConfig(guildId)
-  const loading = await message.reply({ embeds: [infoEmbed('⏳ Fetching trending music...')] })
+  const loading = await message.reply({ embeds: [infoEmbed(' Fetching trending music...')] })
 
   let songs = []
   try {
     songs = await fetchTrending(defaultRegion)
   } catch (e) {
-    return loading.edit({ embeds: [errorEmbed(`❌ Could not fetch charts: ${e.message}`)] })
+    return loading.edit({ embeds: [errorEmbed(` Could not fetch charts: ${e.message}`)] })
   }
 
   if (!songs.length) {
-    return loading.edit({ embeds: [errorEmbed('❌ No trending songs found.')] })
+    return loading.edit({ embeds: [errorEmbed(' No trending songs found.')] })
   }
 
   const state = {
@@ -283,7 +279,7 @@ export async function handleChart(message, args) {
         playSong(guildId, state.voiceChannel, state.textChannel)
       }
       await interaction.followUp({
-        embeds: [infoEmbed(`✅ Added ${state.filtered.length} songs to queue`)],
+        embeds: [infoEmbed(` Added ${state.filtered.length} songs to queue`)],
         ephemeral: true
       }).catch(() => {})
       return
@@ -308,7 +304,7 @@ export async function handleChart(message, args) {
         playSong(guildId, state.voiceChannel, state.textChannel)
       }
       await interaction.followUp({
-        embeds: [infoEmbed(`✅ Added: **${song.title}**`)],
+        embeds: [infoEmbed(` Added: **${song.title}**`)],
         ephemeral: true
       }).catch(() => {})
       return

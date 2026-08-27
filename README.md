@@ -1,22 +1,23 @@
 # Smusic Bot
 
-Smusic Bot adalah bot Discord berbasis Node.js untuk memutar audio dari YouTube dan sumber media terkait. Project ini berjalan sebagai bot Discord saja; tidak ada dashboard web atau server frontend yang perlu dijalankan.
+A Discord music bot built with Node.js and Discord.js. It plays YouTube audio in voice channels, supports queue management, optional YouTube account sessions, and uses the PytubeDL backend for media downloads.
 
-## Fitur
+## Features
 
-- Pemutaran lagu, playlist, dan URL media melalui slash command.
-- Queue per server dengan dukungan skip, pause, resume, loop, autoplay, shuffle, dan pengaturan volume.
-- Downloader berbasis backend PytubeDL dengan fallback ke `youtubei.js` dan `yt-search` untuk pencarian metadata.
-- Penyimpanan cache audio lokal dengan batas ukuran yang dikendalikan oleh cache manager.
-- Registrasi slash command otomatis secara global ketika bot berhasil login ke Discord.
+- Play songs, playlists, and media URLs through slash commands.
+- Per-server queues with skip, pause, resume, loop, autoplay, shuffle, and volume controls.
+- Audio downloads through the PytubeDL backend with youtubei.js and yt-search fallbacks for metadata and search.
+- Local audio caching with a configurable cache manager.
+- Global slash command registration when the bot logs in.
+- Optional personal YouTube Music sessions through a simple HTML cookie page.
 
-## Persyaratan
+## Requirements
 
-- Node.js 20 atau lebih baru.
-- FFmpeg tersedia di `PATH`, atau gunakan binary dari `ffmpeg-static`.
-- Discord application dengan bot token yang valid.
+- Node.js 20 or newer.
+- FFmpeg available in `PATH`, or the bundled `ffmpeg-static` binary.
+- A Discord application with a valid bot token.
 
-## Instalasi
+## Installation
 
 ```bash
 git clone https://github.com/galihrhgnwn/discordmusic-bot.git
@@ -25,117 +26,114 @@ npm install
 cp .env.example .env
 ```
 
-Isi `DISCORD_TOKEN` pada `.env`. Jangan commit file `.env` atau kredensial apa pun ke repository.
+Edit `.env` and set `DISCORD_TOKEN`. Keep the file private and never commit it.
 
-## Menjalankan Bot
+## Running the Bot
+
+Run the bot directly:
 
 ```bash
 npm run bot
 ```
 
-Script tersebut menjalankan `discordbot/index.js` dalam mode produksi. Bot tidak lagi menjalankan Next.js, Express, atau dashboard HTTP.
+The bot starts the Discord client and a small HTTP server for the optional HTML authentication flow. It does not run a dashboard or a Next.js application.
 
 ## Slash Commands
 
-Slash command didaftarkan otomatis ke aplikasi Discord saat bot login. Karena registrasinya global, perubahan command dapat membutuhkan waktu propagasi sebelum terlihat di semua server.
-
-| Command | Keterangan |
+| Command | Description |
 | --- | --- |
-| `/play query:<judul atau URL>` | Memutar lagu atau playlist. |
-| `/chart` | Menampilkan chart musik berdasarkan region dan genre. |
-| `/playlist list` | Menampilkan playlist yang tersedia. |
-| `/playlist play query:<nama>` | Memutar playlist. |
-| `/playlist search query:<kata kunci>` | Mencari playlist. |
-| `/auth login` | Mengirim link HTML untuk menghubungkan akun YouTube secara personal. |
-| `/auth status` | Memeriksa status koneksi akun YouTube. |
-| `/auth logout` | Memutuskan koneksi akun YouTube. |
-| `/pause` | Menjeda pemutaran. |
-| `/resume` | Melanjutkan pemutaran. |
-| `/skip` | Melewati lagu aktif. |
-| `/stop` | Menghentikan pemutaran dan mengosongkan queue. |
-| `/queue view` | Melihat queue. |
-| `/queue clear` | Mengosongkan queue. |
-| `/queue remove index:<nomor>` | Menghapus item dari queue. |
-| `/volume level:<1-100>` | Mengatur volume. |
-| `/quality level:<low|medium|high|lossless>` | Mengatur kualitas audio. |
-| `/loop` | Mengaktifkan atau menonaktifkan loop. |
-| `/autoplay` | Mengaktifkan atau menonaktifkan autoplay. |
-| `/shuffle` | Mengacak queue. |
-| `/now` | Menampilkan lagu yang sedang diputar. |
-| `/history` | Menampilkan riwayat pemutaran. |
-| `/download` | Mengunduh lagu aktif. |
-| `/recommend` | Menampilkan rekomendasi berdasarkan lagu aktif. |
-| `/keepjoin` | Menjaga bot tetap berada di voice channel. |
-| `/quitjoin` | Menonaktifkan mode persistent voice channel. |
-| `/help` | Menampilkan daftar command. |
+| `/play query:<title or URL>` | Play a song or playlist. |
+| `/chart` | Show music charts by region and genre. |
+| `/playlist list` | List available YouTube Music playlists. |
+| `/playlist play query:<name>` | Play a playlist. |
+| `/playlist search query:<term>` | Search YouTube Music playlists. |
+| `/auth login` | Receive an HTML link to connect a personal YouTube account. |
+| `/auth status` | Check the YouTube account connection status. |
+| `/auth logout` | Disconnect the YouTube account. |
+| `/pause` | Pause playback. |
+| `/resume` | Resume playback. |
+| `/skip` | Skip the current song. |
+| `/stop` | Stop playback and clear the queue. |
+| `/queue view` | View the queue. |
+| `/queue clear` | Clear the queue. |
+| `/queue remove index:<number>` | Remove an item from the queue. |
+| `/shuffle` | Shuffle the queue. |
+| `/loop` | Toggle loop mode. |
+| `/autoplay` | Toggle autoplay. |
+| `/volume level:<1-100>` | Set the playback volume. |
+| `/quality level:<low\|medium\|high>` | Set the preferred audio quality. |
+| `/now` | Show the currently playing song. |
+| `/download` | Download the current song. |
+| `/recommend` | Show recommendations based on the current song. |
+| `/keepjoin` | Keep the bot in the voice channel. |
+| `/quitjoin` | Disable persistent voice channel mode. |
+| `/help` | Show the command list. |
 
 ## Environment Variables
 
-| Variable | Wajib | Keterangan |
+| Variable | Required | Description |
 | --- | --- | --- |
-| `DISCORD_TOKEN` | Ya | Token bot dari Discord Developer Portal. |
-| `AUTH_WEB_URL` | Tidak | URL publik halaman HTML auth. Default: `http://localhost:25557`. |
-| `PYTUBE_API_URL` | Tidak | Endpoint downloader. Default: `http://dono-03.danbot.host:1386`. |
-| `BOT_OWNER_ID` | Tidak | Discord user ID pemilik bot. |
+| `DISCORD_TOKEN` | Yes | Bot token from the Discord Developer Portal. |
+| `DISCORD_GUILD_ID` | No | Server ID for immediate command registration. Leave empty for global registration. |
+| `AUTH_WEB_URL` | No | Public URL for the HTML authentication page. Default: `http://localhost:25557`. |
+| `PYTUBE_API_URL` | No | Downloader endpoint. Default: `http://dono-03.danbot.host:1386`. |
+| `BOT_OWNER_ID` | No | Discord user ID of the bot owner. |
 
 ## YouTube Authentication
 
-Login YouTube bersifat opsional. Jalankan `/auth login` di Discord untuk menerima link HTML pribadi. Buka link tersebut, masukkan cookie Netscape dari browser, lalu kirim formulir untuk memvalidasi dan menyimpan sesi akun. Link auth berlaku selama 30 menit dan sebaiknya hanya dibuka melalui URL yang kamu kontrol.
+YouTube authentication is optional. Run `/auth login` in Discord to receive a private HTML link. Open the link, paste a Netscape cookie export from your browser, and submit the form to validate and save the account session. The link expires after 30 minutes and should not be shared.
 
-Atur `AUTH_WEB_URL` ke alamat publik server bot jika link akan dibuka dari perangkat lain:
+The HTML authentication page is served at `/auth/cookie` by the lightweight server on port `25557`. Set `AUTH_WEB_URL` to a public URL when the bot is running on a remote server:
 
 ```env
 AUTH_WEB_URL="https://bot.example.com"
 ```
 
-## Backend Downloader
+Never send Discord tokens or YouTube cookies through chat, issues, or commits.
 
-Downloader memakai endpoint audio resmi backend PytubeDL:
+## Downloader Backend
+
+The bot uses the documented PytubeDL audio endpoint:
 
 ```text
 GET /api/download/audio?url=<youtube-url>&format=m4a
 ```
 
-Endpoint ini memilih dan mengunduh format audio langsung dari backend, sehingga bot tidak bergantung pada schema stream lama atau pemilihan `itag` secara lokal.
+The default endpoint is `http://dono-03.danbot.host:1386` and can be overridden with `PYTUBE_API_URL`.
 
-Endpoint default dapat diganti tanpa mengubah source code:
+## Development
 
-```env
-PYTUBE_API_URL="http://dono-03.danbot.host:1386"
-```
-
-## Pengembangan
-
-Jalankan lint sebelum membuat perubahan:
+Check the project before committing changes:
 
 ```bash
 npm run lint
+npm run build
 ```
 
-Pastikan working tree bersih dan tidak ada kredensial, cache runtime, atau file eksperimen yang ikut ter-commit.
+Keep the working tree clean and do not commit credentials, runtime caches, or temporary files.
 
-## Lisensi
-
-Project ini dikelola untuk penggunaan pribadi dan eksperimen. Pastikan penggunaan sumber media mematuhi ketentuan layanan dan hukum yang berlaku.
-
-> Jangan bagikan `DISCORD_TOKEN`, cookie YouTube, atau kredensial backend melalui chat, issue, atau commit Git.
-
-## Struktur Project
+## Project Structure
 
 ```text
 discordbot/
-├── commands/       Slash command handlers
-├── core/           Player, queue, downloader, session, dan registrasi command
-├── auth/           Utilitas auth lama yang tidak dipakai untuk startup bot
-└── utils/          Cache, logger, permission, dan helper lainnya
+  auth/           HTML authentication page and auth handler
+  commands/       Discord command handlers
+  core/           Player, queue, downloader, sessions, and command registration
+  utils/          Cache, logging, permissions, and shared helpers
 ```
 
-Dashboard web telah dihapus dari project. Runtime utama sekarang hanya `discordbot/index.js`.
+The runtime entry point is `discordbot/index.js`.
 
 ## Troubleshooting
 
-Jika bot gagal login, periksa `DISCORD_TOKEN` dan pastikan bot sudah diundang ke server dengan scope `bot` dan `applications.commands`.
+If the bot cannot log in, check `DISCORD_TOKEN` and confirm that the bot was invited with the `bot` and `applications.commands` scopes.
 
-Jika audio gagal diputar, pastikan FFmpeg tersedia dan endpoint `PYTUBE_API_URL` dapat diakses dari server bot.
+If audio cannot be played, make sure FFmpeg is available and that `PYTUBE_API_URL` is reachable from the bot server.
 
-Jika slash command belum terlihat, tunggu propagasi registrasi global Discord atau hapus dan undang ulang bot dengan scope `applications.commands`.
+If slash commands are not visible, wait for global Discord registration to propagate or use `DISCORD_GUILD_ID` for immediate registration during development.
+
+If HTML authentication links cannot be opened from another device, set `AUTH_WEB_URL` to the public address of the bot server and expose port `25557`.
+
+## License
+
+This project is intended for personal use and experimentation. Follow the applicable service terms and laws when using external media sources.

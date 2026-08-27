@@ -14,18 +14,17 @@ export function parsePrefix(rawQuery) {
   return { mode: null, cleanQuery: rawQuery.trim() };
 }
 
-const MUSIC_KEYWORDS = ['music', 'song', 'lyrics', 'official', 'audio', 'mv', 'lagu']
+const MUSIC_KEYWORDS = ['music', 'song', 'lyrics', 'official', 'audio', 'mv']
 
 export async function searchSongs(rawQuery, requesterId = null) {
   const { mode, cleanQuery } = parsePrefix(rawQuery)
 
   let results = []
 
-  // Prioritas 1: YouTube Music search via InnerTube
   try {
     const { getUserSession } = await import('../core/userSessionManager.js')
     const { getSession } = await import('../core/sessionManager.js')
-    
+
     let yt = null
     if (requesterId) {
       yt = await getUserSession(requesterId)
@@ -40,17 +39,14 @@ export async function searchSongs(rawQuery, requesterId = null) {
     results = songs
       .filter(s => s.id)
       .map(s => {
-      // title bisa berupa string atau object
       const title = typeof s.title === 'string'
         ? s.title
         : s.title?.text || s.title?.runs?.[0]?.text || 'Unknown'
 
-      // artists bisa array atau object
       const author = Array.isArray(s.artists)
         ? s.artists.map(a => a.name || a.text || '').join(', ')
         : s.artist?.name || s.artists?.name || ''
 
-      // duration
       const duration = s.duration?.seconds
         || s.duration
         || 0
@@ -60,13 +56,11 @@ export async function searchSongs(rawQuery, requesterId = null) {
           ? `${Math.floor(duration / 60)}:${String(duration % 60).padStart(2, '0')}`
           : '?:??')
 
-      // views
       const views = s.views
         || s.view_count?.text
         || s.short_view_count?.text
         || ''
 
-      // thumbnail
       const thumbnail = s.thumbnail?.contents?.[0]?.url
         || s.thumbnail?.[0]?.url
         || s.thumbnails?.[0]?.url
@@ -88,9 +82,8 @@ export async function searchSongs(rawQuery, requesterId = null) {
     console.warn('[Searcher] YouTube Music search failed, using yt-search:', e.message)
   }
 
-  // Fallback: yt-search jika YTMusic gagal
   if (!results.length) {
-    const MUSIC_KEYWORDS = ['music', 'song', 'lyrics', 'official', 'audio', 'lagu']
+    const MUSIC_KEYWORDS = ['music', 'song', 'lyrics', 'official', 'audio']
     const hasKeyword = MUSIC_KEYWORDS.some(k => cleanQuery.toLowerCase().includes(k))
     const searchQuery = (!hasKeyword && !mode) ? `${cleanQuery} official audio` : cleanQuery
 
@@ -117,7 +110,6 @@ export async function searchSongs(rawQuery, requesterId = null) {
       }))
   }
 
-  // Apply filters
   if (mode === 'artist') {
     results = results.filter(v =>
       v.author.toLowerCase().includes(cleanQuery.toLowerCase())

@@ -10,14 +10,13 @@ import {
 } from 'discord.js'
 import { userInVoice } from '../utils/checkPermissions.js'
 
-// Helper: require login
 async function requireLogin(message) {
   const userId = message.author.id
   if (!isUserLoggedIn(userId)) {
     await message.reply({ embeds: [
       new EmbedBuilder()
         .setDescription(
-          `❌ You need to connect your YouTube account first.\n` +
+          ` You need to connect your YouTube account first.\n` +
           `Run \`/auth login\` to get started.`
         )
         .setColor(0xFF0000)
@@ -46,22 +45,21 @@ export async function handlePlaylist(message, args) {
     default:
       return message.reply({ embeds: [errorEmbed(
         'Usage:\n' +
-        '`/playlist list` — List your playlists\n' +
-        '`/playlist play <nama>` — Play a playlist\n' +
-        '`/playlist search <nama>` — Search playlist by name'
+        '`/playlist list`  List your playlists\n' +
+        '`/playlist play <nama>`  Play a playlist\n' +
+        '`/playlist search <nama>`  Search playlist by name'
       )] })
   }
 }
 
 async function fetchUserPlaylists(yt) {
   try {
-    // Coba getLibraryPlaylists dulu (lebih ringan)
     const result = await yt.music.getLibraryPlaylists()
     const contents = result?.contents || []
 
     return contents
       .filter(p => p && (p.id || p.playlist_id))
-      .slice(0, 50) // batasi 50 playlist
+      .slice(0, 50)
       .map(p => ({
         id: p.id || p.playlist_id || '',
         title: (() => {
@@ -86,12 +84,10 @@ async function fetchUserPlaylists(yt) {
   } catch (e) {
     console.error('[Playlist] fetchUserPlaylists error:', e.message)
 
-    // Fallback: coba getLibrary biasa
     try {
       const library = await yt.music.getLibrary()
       const items = []
 
-      // Safely iterate contents
       if (library?.contents && Array.isArray(library.contents)) {
         for (const section of library.contents) {
           const sectionItems = section?.contents || section?.items || []
@@ -118,11 +114,10 @@ async function fetchUserPlaylists(yt) {
   }
 }
 
-// /playlist list / /playlist list list
 async function handlePlaylistList(message, userId) {
   if (!await requireLogin(message)) return
 
-  const loading = await message.reply({ embeds: [infoEmbed('⏳ Fetching your playlists...')] })
+  const loading = await message.reply({ embeds: [infoEmbed(' Fetching your playlists...')] })
 
   try {
     const yt = await getUserSession(userId)
@@ -132,20 +127,18 @@ async function handlePlaylistList(message, userId) {
       return loading.edit({ embeds: [errorEmbed('No playlists found in your YouTube Music library.')] })
     }
 
-    // Build embed list
     const desc = playlists.slice(0, 20).map((p, i) => {
       const name = p.title || 'Unknown'
       const count = p.subtitle?.text || '? songs'
-      return `**${i + 1}.** ${name}\n└ ${count}`
+      return `**${i + 1}.** ${name}\n ${count}`
     }).join('\n\n')
 
     const embed = new EmbedBuilder()
-      .setTitle('📋 Your YouTube Music Playlists')
+      .setTitle(' Your YouTube Music Playlists')
       .setDescription(desc)
       .setColor(0xFF0000)
-      .setFooter({ text: `${playlists.length} playlist(s) • smusic bot` })
+      .setFooter({ text: `${playlists.length} playlist(s)  smusic bot` })
 
-    // Select menu untuk langsung play
     const options = playlists.slice(0, 25).map(p =>
       new StringSelectMenuOptionBuilder()
         .setLabel(p.title?.slice(0, 100) || 'Unknown')
@@ -187,7 +180,6 @@ async function handlePlaylistList(message, userId) {
   }
 }
 
-// /playlist play <nama atau ID>
 async function handlePlaylistPlay(message, userId, query) {
   if (!await requireLogin(message)) return
   if (!userInVoice(message)) {
@@ -197,13 +189,12 @@ async function handlePlaylistPlay(message, userId, query) {
     return message.reply({ embeds: [errorEmbed('Provide a playlist name. Usage: `/playlist play <nama>`')] })
   }
 
-  const loading = await message.reply({ embeds: [infoEmbed('⏳ Searching your playlists...')] })
+  const loading = await message.reply({ embeds: [infoEmbed(' Searching your playlists...')] })
 
   try {
     const yt = await getUserSession(userId)
     const playlists = await fetchUserPlaylists(yt)
 
-    // Cari playlist by name (case-insensitive)
     const match = playlists.find(p =>
       p.title?.toLowerCase().includes(query.toLowerCase())
     )
@@ -224,19 +215,17 @@ async function handlePlaylistPlay(message, userId, query) {
   }
 }
 
-// /playlist search <nama>
 async function handlePlaylistSearch(message, userId, query) {
   if (!await requireLogin(message)) return
   if (!query) {
     return message.reply({ embeds: [errorEmbed('Provide a search query.')] })
   }
 
-  const loading = await message.reply({ embeds: [infoEmbed(`⏳ Searching playlists for "${query}"...`)] })
+  const loading = await message.reply({ embeds: [infoEmbed(` Searching playlists for "${query}"...`)] })
 
   try {
     const yt = await getUserSession(userId)
 
-    // Search playlist di YouTube Music
     const searchResult = await yt.music.search(query, { type: 'playlist' })
     const playlists = searchResult?.playlists?.contents || []
 
@@ -248,11 +237,11 @@ async function handlePlaylistSearch(message, userId, query) {
       const name = p.title || 'Unknown'
       const author = p.author?.name || ''
       const count = p.song_count || ''
-      return `**${i + 1}.** ${name}\n└ ${author}${count ? ' • ' + count + ' songs' : ''}`
+      return `**${i + 1}.** ${name}\n ${author}${count ? '  ' + count + ' songs' : ''}`
     }).join('\n\n')
 
     const embed = new EmbedBuilder()
-      .setTitle(`🔍 Playlist Search: "${query}"`)
+      .setTitle(` Playlist Search: "${query}"`)
       .setDescription(desc)
       .setColor(0xFF0000)
       .setFooter({ text: 'smusic bot' })
@@ -301,7 +290,6 @@ async function handlePlaylistSearch(message, userId, query) {
   }
 }
 
-// Helper: load playlist dan tambah ke queue
 async function loadAndQueuePlaylist(message, userId, playlistId, playlistTitle, editTarget) {
   const guildId = message.guild.id
 
@@ -353,8 +341,8 @@ async function loadAndQueuePlaylist(message, userId, playlistId, playlistTitle, 
     }
 
     const successEmbed = new EmbedBuilder()
-      .setTitle(`📋 ${title}`)
-      .setDescription(`✅ Added **${added}** songs to queue`)
+      .setTitle(` ${title}`)
+      .setDescription(` Added **${added}** songs to queue`)
       .setColor(0xFF0000)
       .setFooter({ text: 'smusic bot' })
 

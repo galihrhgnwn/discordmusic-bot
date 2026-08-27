@@ -3,8 +3,6 @@ import vm from 'vm'
 import fs from 'fs'
 import path from 'path'
 
-// WAJIB: set eval SEBELUM Innertube.create() dipanggil
-// Ini yang bikin decipher bisa jalan di Node.js
 Platform.shim.eval = async (data, env) => {
   const properties = []
   if (env.n) {
@@ -14,11 +12,9 @@ Platform.shim.eval = async (data, env) => {
     properties.push(`sig: exportedVars.sigFunction("${env.sig}")`)
   }
   const code = `${data.output}\nreturn { ${properties.join(', ')} }`
-  // Pakai vm.runInNewContext untuk keamanan lebih baik
   try {
     return vm.runInNewContext(`(function() { ${code} })()`)
   } catch {
-    // Fallback ke Function constructor
     return new Function(code)()
   }
 }
@@ -43,7 +39,7 @@ export function getSession() {
 export function isLoggedIn() {
   const fileExists = fs.existsSync(CREDS_FILE)
   if (!fileExists) return false
-  
+
   try {
     return _session?.session?.logged_in === true || fileExists
   } catch {
@@ -56,7 +52,7 @@ export async function loadSavedCredentials() {
   try {
     const creds = JSON.parse(fs.readFileSync(CREDS_FILE, 'utf-8'))
     await _session.session.signIn(creds)
-    console.log('[Session] ✅ Credentials loaded')
+    console.log('[Session]  Credentials loaded')
     return true
   } catch (e) {
     console.warn('[Session] Failed to load credentials:', e.message)
@@ -87,7 +83,7 @@ export function watchCredentials() {
       if (_session?.session?.logged_in) return
 
       await _session.session.signIn(creds)
-      console.log('[Session] ✅ Credentials reloaded from file change')
+      console.log('[Session]  Credentials reloaded from file change')
 
     } catch (e) {
       console.warn('[Session] Polling reload failed:', e.message)
