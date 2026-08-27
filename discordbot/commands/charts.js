@@ -1,5 +1,6 @@
 import yts from 'yt-search'
 import { getSession } from '../core/sessionManager.js'
+import { getUserSession } from '../core/userSessionManager.js'
 import { addToQueue } from '../core/queue.js'
 import { getConfig } from '../utils/serverConfig.js'
 import { playSong, getPlayerState } from '../core/player.js'
@@ -24,10 +25,11 @@ const GENRES = ['All', 'Pop', 'Hip-Hop', 'R&B', 'Rock', 'Electronic']
 const REFRESH_COOLDOWN = 30 * 1000
 const chartStateMap = new Map()
 
-async function fetchTrending(region = 'ID') {
+async function fetchTrending(region = 'ID', userId = null) {
+  const personalSession = userId ? await getUserSession(userId) : null
+  const session = personalSession || getSession()
   try {
-    const yt = getSession()
-    const charts = await yt.music.getCharts(region)
+    const charts = await session.music.getCharts(region)
 
     const songs = charts?.songs?.contents || []
     if (songs.length) {
@@ -45,8 +47,7 @@ async function fetchTrending(region = 'ID') {
   }
 
   try {
-    const yt = getSession()
-    const trending = await yt.getTrending()
+    const trending = await session.getTrending()
     const musicSection = trending?.sections?.find(s =>
       s.title?.text?.toLowerCase().includes('music') ||
       s.title?.text?.toLowerCase().includes('musik')
@@ -195,7 +196,7 @@ export async function handleChart(message, args) {
 
   let songs = []
   try {
-    songs = await fetchTrending(defaultRegion)
+    songs = await fetchTrending(defaultRegion, message.author.id)
   } catch (e) {
     return loading.edit({ embeds: [errorEmbed(` Could not fetch charts: ${e.message}`)] })
   }
@@ -212,7 +213,8 @@ export async function handleChart(message, args) {
     lastRefresh: Date.now(),
     voiceChannel: message.member.voice.channel,
     textChannel: message.channel,
-    guildId
+    guildId,
+    userId: message.author.id
   }
 
   const reply = await loading.edit({
@@ -223,6 +225,7 @@ export async function handleChart(message, args) {
   chartStateMap.set(reply.id, state)
 
   const collector = reply.createMessageComponentCollector({
+    filter: interaction => interaction.user.id === state.userId,
     time: 10 * 60 * 1000
   })
 
@@ -235,7 +238,7 @@ export async function handleChart(message, args) {
     if (interaction.customId === 'chart_region') {
       state.region = interaction.values[0]
       try {
-        state.songs = await fetchTrending(state.region)
+        state.songs = await fetchTrending(state.region, state.userId)
         state.filtered = applyGenreFilter(state.songs, state.genre).slice(0, 10)
         state.lastRefresh = Date.now()
       } catch {}
@@ -256,7 +259,7 @@ export async function handleChart(message, args) {
         return
       }
       try {
-        state.songs = await fetchTrending(state.region)
+        state.songs = await fetchTrending(state.region, state.userId)
         state.filtered = applyGenreFilter(state.songs, state.genre).slice(0, 10)
         state.lastRefresh = Date.now()
       } catch {}
@@ -271,6 +274,7 @@ export async function handleChart(message, args) {
           duration: s.duration,
           thumbnail: s.thumbnail,
           requester: interaction.user.tag,
+          requesterId: state.userId,
           quality,
           startTime: null
         })
@@ -297,6 +301,7 @@ export async function handleChart(message, args) {
         duration: song.duration,
         thumbnail: song.thumbnail,
         requester: interaction.user.tag,
+        requesterId: state.userId,
         quality,
         startTime: null
       })

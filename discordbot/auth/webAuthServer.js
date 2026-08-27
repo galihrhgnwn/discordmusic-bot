@@ -36,8 +36,9 @@ async function handleCookieSubmission(req, res) {
     const cookie = typeof body.cookie === 'string' ? body.cookie.trim() : ''
     if (!token || !cookie) return sendJson(res, 400, { error: 'Token and cookie are required' })
 
-    const userId = consumePendingAuth(token)
-    if (!userId) return sendJson(res, 400, { error: 'This authentication link is invalid or expired' })
+    const authRequest = consumePendingAuth(token)
+    if (!authRequest?.userId) return sendJson(res, 400, { error: 'This authentication link is invalid or expired' })
+    const { userId, discordUsername, discordTag } = authRequest
 
     const yt = await Innertube.create({
       cookie,
@@ -59,6 +60,8 @@ async function handleCookieSubmission(req, res) {
       accountName,
       accountEmail,
       userId,
+      discordUsername,
+      discordTag,
       loginTime: new Date().toISOString()
     })
     return sendJson(res, 200, { success: true, accountName })

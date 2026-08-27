@@ -81,7 +81,9 @@ The bot starts the Discord client and a small HTTP server for the optional HTML 
 
 ## YouTube Authentication
 
-YouTube authentication is optional. Run `/auth login` in Discord to receive a private HTML link. Open the link, paste a Netscape cookie export from your browser, and submit the form to validate and save the account session. The link expires after 30 minutes and should not be shared.
+YouTube authentication is optional. Run `/auth login` in Discord to receive a private HTML link. Open the link, paste a Netscape cookie export from your browser, and submit the form to validate and save the account session. The link expires after 5 minutes and should not be shared.
+
+Each pending link is generated from a cryptographically random token and is bound to the Discord user who requested it. Saved cookies, YouTube sessions, account profiles, and personal playlist lookups are stored under that Discord user ID. Users cannot use another user's pending link or access another user's saved playlist session. Songs queued from personal searches, playlists, charts, and recommendations retain the requesting Discord user ID for requester-aware playback.
 
 The HTML authentication page is served at `/auth/cookie` by the lightweight server on port `25557`. Set `AUTH_WEB_URL` to a public URL when the bot is running on a remote server:
 
@@ -107,10 +109,9 @@ Check the project before committing changes:
 
 ```bash
 npm run lint
-npm run build
 ```
 
-Keep the working tree clean and do not commit credentials, runtime caches, or temporary files.
+Keep the working tree clean and do not commit credentials, runtime caches, or temporary files. Run `npm run lint` before committing changes.
 
 ## Project Structure
 

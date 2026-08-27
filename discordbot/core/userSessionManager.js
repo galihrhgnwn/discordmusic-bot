@@ -132,14 +132,16 @@ function ensurePendingDir() {
   }
 }
 
-export function createPendingAuth(userId) {
+export function createPendingAuth(userId, discordUser = {}) {
   ensurePendingDir()
   const token = crypto.randomUUID()
   const filePath = path.join(PENDING_DIR, `${token}.json`)
   fs.writeFileSync(filePath, JSON.stringify({
     userId,
+    discordUsername: discordUser.username || '',
+    discordTag: discordUser.tag || '',
     createdAt: Date.now(),
-    expiresAt: Date.now() + 30 * 60 * 1000
+    expiresAt: Date.now() + 5 * 60 * 1000
   }))
   return token
 }
@@ -164,12 +166,25 @@ export function getPendingAuth(token) {
 }
 
 export function consumePendingAuth(token) {
-  const userId = getPendingAuth(token)
-  if (userId) {
-    const filePath = path.join(PENDING_DIR, `${token}.json`)
+  const filePath = path.join(PENDING_DIR, `${token}.json`)
+  if (!fs.existsSync(filePath)) return null
+
+  try {
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+    if (Date.now() > data.expiresAt) {
+      fs.unlinkSync(filePath)
+      return null
+    }
+    fs.unlinkSync(filePath)
+    return {
+      userId: data.userId,
+      discordUsername: data.discordUsername || '',
+      discordTag: data.discordTag || ''
+    }
+  } catch {
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
+    return null
   }
-  return userId
 }
 
 export function cleanupExpiredTokens() {

@@ -28,7 +28,7 @@ export async function handleAuth(message, args) {
     }
 
     const { createPendingAuth } = await import('../core/userSessionManager.js');
-    const token = createPendingAuth(userId);
+    const token = createPendingAuth(userId, { username: message.author.username, tag: username });
     const authWebUrl = process.env.AUTH_WEB_URL || `http://localhost:${process.env.PORT || 25557}`;
     const loginUrl = `${authWebUrl}/auth/cookie?token=${encodeURIComponent(token)}`;
 
@@ -38,7 +38,7 @@ export async function handleAuth(message, args) {
         `Click the link below to connect your YouTube cookies:\n\n` +
         `**[ Click Here to Connect](${loginUrl})**\n\n` +
         `\`${loginUrl}\`\n\n` +
-        ` Link expires in **30 minutes**.\n` +
+        ` Link expires in **5 minutes**.\n` +
         ` Do not share this link with anyone.`
       )
       .setColor(0xFF0000)
