@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Smusic Bot Authentication</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, -apple-system, sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #111827; color: #e5e7eb; }
+    main { width: min(92vw, 640px); box-sizing: border-box; padding: 28px; border: 1px solid #374151; border-radius: 12px; background: #1f2937; }
+    h1 { margin-top: 0; font-size: 1.5rem; }
+    p { line-height: 1.55; color: #cbd5e1; }
+    label { display: block; margin: 20px 0 8px; font-weight: 600; }
+    textarea { width: 100%; min-height: 180px; box-sizing: border-box; padding: 12px; resize: vertical; border: 1px solid #4b5563; border-radius: 8px; background: #111827; color: #f9fafb; font: 0.9rem ui-monospace, monospace; }
+    button { margin-top: 16px; padding: 10px 16px; border: 0; border-radius: 8px; background: #6366f1; color: white; font-weight: 700; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: wait; }
+    #status { margin-top: 16px; min-height: 1.5em; }
+    .success { color: #86efac; }
+    .error { color: #fca5a5; }
+    small { color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Connect YouTube to Smusic Bot</h1>
+    <p>Paste the Netscape cookie content exported from your browser. The cookie is sent directly to this bot server over the current connection and is not displayed after submission.</p>
+    <p><small>This link expires after 30 minutes. Do not share it with anyone.</small></p>
+    <form id="auth-form">
+      <input type="hidden" id="token" value="">
+      <label for="cookie">YouTube cookie</label>
+      <textarea id="cookie" name="cookie" required placeholder="# Netscape HTTP Cookie File"></textarea>
+      <button id="submit" type="submit">Connect account</button>
+      <div id="status" role="status"></div>
+    </form>
+  </main>
+  <script>
+    const form = document.getElementById('auth-form');
+    const token = new URLSearchParams(location.search).get('token') || '';
+    document.getElementById('token').value = token;
+    const status = document.getElementById('status');
+    const button = document.getElementById('submit');
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      status.className = '';
+      status.textContent = 'Validating cookie...';
+      button.disabled = true;
+      try {
+        const response = await fetch('/auth/cookie', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, cookie: document.getElementById('cookie').value })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Authentication failed');
+        status.className = 'success';
+        status.textContent = `Connected${result.accountName ? ` as ${result.accountName}` : ''}. You can close this page.`;
+        document.getElementById('cookie').value = '';
+        form.querySelector('textarea').disabled = true;
+      } catch (error) {
+        status.className = 'error';
+        status.textContent = error.message;
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
