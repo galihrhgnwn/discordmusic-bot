@@ -3,7 +3,7 @@ import path from 'path'
 import { hasCache, getCachePath, enforceLimit } from '../utils/cacheManager.js'
 import { getSession } from './sessionManager.js'
 
-const PYTUBE_API = 'https://pytube.nowhere.qzz.io'
+const PYTUBE_API = process.env.PYTUBE_API_URL || 'http://dono-03.danbot.host:1386'
 
 export const sourceMap = new Map()
 

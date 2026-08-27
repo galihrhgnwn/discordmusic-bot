@@ -37,6 +37,12 @@ export async function playSong(guildId, voiceChannel, textChannel) {
     return
   }
 
+  const { audioSource } = getConfig(guildId)
+  if (audioSource === 'lavalink') {
+    const { playSongLavalink } = await import('./lavalinkManager.js')
+    return playSongLavalink(guildId, voiceChannel, textChannel, song)
+  }
+
   // Simpan channel references untuk autoplay
   voiceChannelMap.set(guildId, voiceChannel)
   textChannelMap.set(guildId, textChannel)
@@ -204,6 +210,33 @@ export function setVolume(guildId, volume) {
   const player = playerMap.get(guildId)
   if (player?.state?.resource?.volume) {
     player.state.resource.volume.setVolume(volume / 100)
+  }
+}
+
+export async function switchBackend(guildId, source, textChannel, voiceChannel) {
+  if (source !== 'default' && source !== 'lavalink') {
+    throw new Error(`Unsupported audio backend: ${source}`)
+  }
+
+  const currentSong = queue.getCurrentSong(guildId)
+  const currentVoiceChannel = voiceChannel || voiceChannelMap.get(guildId)
+  const currentTextChannel = textChannel || textChannelMap.get(guildId)
+
+  if (source === 'lavalink') {
+    const { destroyLavalinkConnection, playSongLavalink } = await import('./lavalinkManager.js')
+    destroyConnection(guildId)
+    destroyLavalinkConnection(guildId)
+    if (currentSong && currentVoiceChannel && currentTextChannel) {
+      await playSongLavalink(guildId, currentVoiceChannel, currentTextChannel, currentSong)
+    }
+    return
+  }
+
+  const { stopLavalink } = await import('./lavalinkManager.js')
+  stopLavalink(guildId)
+  destroyConnection(guildId)
+  if (currentSong && currentVoiceChannel && currentTextChannel) {
+    await playSong(guildId, currentVoiceChannel, currentTextChannel)
   }
 }
 

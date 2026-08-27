@@ -1,5 +1,5 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { getSource } from '../core/audioSourceManager.js';
+import { getSource, setSource } from '../core/audioSourceManager.js';
 import { switchBackend, voiceChannelMap } from '../core/player.js';
 
 export async function handleAudioCommand(message, args) {
@@ -50,6 +50,7 @@ export async function handleAudioCommand(message, args) {
 
         try {
             const voiceChannel = message.member?.voice?.channel || voiceChannelMap.get(guildId) || null;
+            setSource(guildId, newSource);
             await switchBackend(guildId, newSource, message.channel, voiceChannel);
 
             await i.update({
