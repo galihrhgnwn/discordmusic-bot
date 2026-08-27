@@ -7,7 +7,6 @@ import { errorEmbed, infoEmbed } from '../utils/embeds.js';
 import { getPlayerState, playSong, keepJoinMap, destroyConnection, clearIdleTimer } from '../core/player.js';
 import { getConfig } from '../utils/serverConfig.js';
 import { isOnCooldown, setCooldown, getRemainingSeconds } from '../utils/cooldown.js';
-import { logError } from '../utils/logger.js';
 
 export async function handleDownload(message, args) {
     const userId = message.author.id;
@@ -137,7 +136,7 @@ export async function handleRecommend(message, args) {
                 message.channel.send({ embeds: [infoEmbed(`✅ Added to queue: **${picked.title?.text}**`)] }).catch(() => {});
             }
         } catch (e) {
-            logError('[Recommend]', e);
+            console.error('[Recommend]', e);
         }
     });
 

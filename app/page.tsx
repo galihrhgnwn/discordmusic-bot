@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import { ExternalLink, ShieldCheck, Activity, Box, Zap, Settings, Command } from 'lucide-react';
 import LiveConsole from '../components/LiveConsole';
 
@@ -18,15 +17,6 @@ export default function Dashboard() {
         {/* Navigation / Header */}
         <header className="flex items-center justify-between mb-12 py-4 border-b border-white/5">
           <div className="flex items-center gap-4">
-            <div className="relative w-12 h-12 rounded-xl overflow-hidden shadow-lg shadow-indigo-500/20 border border-white/10 ring-1 ring-white/5">
-              <Image 
-                src="https://files.catbox.moe/uefsn7.jpg" 
-                alt="Aether's Bot Logo" 
-                fill 
-                className="object-cover"
-                referrerPolicy="no-referrer"
-              />
-            </div>
             <div>
               <h1 className="text-2xl font-bold font-display tracking-tight text-white flex items-center gap-2">
                 Aether&apos;s

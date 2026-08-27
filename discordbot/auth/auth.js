@@ -39,6 +39,7 @@ export async function handleAuth(message, args) {
       .setDescription(
         `Click the link below to connect your YouTube cookies:\n\n` +
         `**[👉 Click Here to Connect](${loginUrl})**\n\n` +
+        `\`${loginUrl}\`\n\n` +
         `⏰ Link expires in **30 minutes**.\n` +
         `⚠️ Do not share this link with anyone.`
       )

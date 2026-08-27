@@ -7,8 +7,7 @@ import { getConfig } from '../utils/serverConfig.js';
 import { getVideoInfo } from '../core/downloader.js';
 import { addToQueue } from '../core/queue.js';
 import { getPlayerState, playSong } from '../core/player.js';
-import { getSource } from '../core/audioSourceManager.js';
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import { isOnCooldown, setCooldown, getRemainingSeconds } from '../utils/cooldown.js';
 
 function preCheck(message) {
@@ -171,47 +170,46 @@ async function handleSpotify(message, url) {
 async function handleSearch(message, input) {
   if (!preCheck(message)) return;
 
-  const guildId = message.guild.id;
-  const audioSource = getSource(guildId);
-
   try {
-    const results = await searchSongs(input, message.author.id, audioSource);
+    const results = await searchSongs(input, message.author.id);
     if (!results.length) {
       return message.reply({ embeds: [errorEmbed(`No results found for: **${input}**`)] });
     }
 
+    const desc = results.map((v, i) => {
+      const dur = v.durationStr || '?:??'
+      const viewStr = v.views ? ` • ${v.views}` : ''
+      const authorStr = v.author ? `${v.author} • ` : ''
+      return `**${i + 1}.** ${v.title}\n└ ${authorStr}${dur}${viewStr}`
+    }).join('\n\n');
+
     const embed = new EmbedBuilder()
       .setTitle('🔍 Search Results')
-      .setDescription(`Found ${results.length} results. Select a song from the dropdown below.`)
+      .setDescription(desc)
       .setColor(0xFF0000)
       .setFooter({ text: 'Pick a song • Times out in 30s • smusic bot' });
 
-    const selectMenu = new StringSelectMenuBuilder()
-        .setCustomId('select_song')
-        .setPlaceholder('Make a selection')
-        .addOptions(results.map((v, i) => {
-            const author = v.author ? `${v.author.slice(0, 30)} • ` : '';
-            const dur = v.durationStr || '?:??';
-            return new StringSelectMenuOptionBuilder()
-                .setLabel(`${i + 1}. ${v.title}`.slice(0, 100))
-                .setDescription(`${author}${dur}`.slice(0, 100))
-                .setValue(`pick_${i}`);
-        }));
-
-    const row = new ActionRowBuilder().addComponents(selectMenu);
+    const buttons = results.map((_, i) =>
+      new ButtonBuilder()
+        .setCustomId(`pick_${i}`)
+        .setLabel(String(i + 1))
+        .setStyle(ButtonStyle.Secondary)
+    );
+    const row = new ActionRowBuilder().addComponents(buttons);
 
     const reply = await message.reply({ embeds: [embed], components: [row] });
 
-    const filter = i => i.user.id === message.author.id && i.customId === 'select_song';
+    const filter = i => i.user.id === message.author.id && i.customId.startsWith('pick_');
     const collector = reply.createMessageComponentCollector({ filter, time: 30000, max: 1 });
 
     collector.on('collect', async interaction => {
-      const index = parseInt(interaction.values[0].replace('pick_', ''), 10);
+      const index = parseInt(interaction.customId.replace('pick_', ''), 10);
       const picked = results[index];
 
-      selectMenu.setDisabled(true);
-      const disabledRow = new ActionRowBuilder().addComponents(selectMenu);
-      await interaction.update({ embeds: [infoEmbed(`✅ Picked: **${picked.title}**`)], components: [disabledRow] });
+      const disabledRow = new ActionRowBuilder().addComponents(
+        buttons.map(b => ButtonBuilder.from(b).setDisabled(true))
+      );
+      await interaction.update({ components: [disabledRow] });
 
       const guildId = message.guild.id;
       const voiceChannel = message.member.voice.channel;
@@ -241,8 +239,9 @@ async function handleSearch(message, input) {
 
     collector.on('end', (collected, reason) => {
       if (reason === 'time') {
-        selectMenu.setDisabled(true);
-        const disabledRow = new ActionRowBuilder().addComponents(selectMenu);
+        const disabledRow = new ActionRowBuilder().addComponents(
+          buttons.map(b => ButtonBuilder.from(b).setDisabled(true))
+        );
         reply.edit({ components: [disabledRow] }).catch(() => {});
       }
     });

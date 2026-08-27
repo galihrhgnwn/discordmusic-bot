@@ -16,4 +16,3 @@ node_modules/
 ~/.cache/yt-dlp/
 ./bgutil-pot-server/
 ./yt-dlp-plugins/
-.ytcache/

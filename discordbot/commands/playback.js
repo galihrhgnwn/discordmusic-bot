@@ -6,7 +6,6 @@ import { setConfig } from '../utils/serverConfig.js';
 import { validateQuality } from '../utils/qualityConfig.js';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import { isAutoplay, setAutoplay } from '../core/autoplayManager.js';
-import { logError } from '../utils/logger.js';
 
 function wrap(commandName, fn) {
     return async (message, args) => {
@@ -19,7 +18,7 @@ function wrap(commandName, fn) {
         try {
             await fn(message, args);
         } catch (e) {
-            logError(`[Command Error] ${commandName}:`, e);
+            console.error(`[Command Error] ${commandName}:`, e);
             message.reply({ embeds: [errorEmbed(`Error: ${e.message}`)] }).catch(() => {});
         }
     };

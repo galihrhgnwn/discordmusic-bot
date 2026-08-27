@@ -2,27 +2,18 @@ import fs from 'fs';
 import path from 'path';
 
 const STORAGE_PATH = './data/serverConfig.json';
-const DEFAULTS = { quality: 'high', volume: 100, defaultRegion: 'ID', audioSource: 'default' };
-
-let cache = null;
+const DEFAULTS = { quality: 'high', volume: 100, defaultRegion: 'ID' };
 
 export function load() {
-    if (cache !== null) return cache;
-    if (!fs.existsSync(STORAGE_PATH)) {
-        cache = {};
-        return cache;
-    }
+    if (!fs.existsSync(STORAGE_PATH)) return {};
     try {
-        cache = JSON.parse(fs.readFileSync(STORAGE_PATH, 'utf8'));
-        return cache;
+        return JSON.parse(fs.readFileSync(STORAGE_PATH, 'utf8'));
     } catch (e) {
-        cache = {};
-        return cache;
+        return {};
     }
 }
 
 export function save(data) {
-    cache = data;
     fs.writeFileSync(STORAGE_PATH, JSON.stringify(data, null, 2));
 }
 
