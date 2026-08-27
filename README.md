@@ -81,24 +81,27 @@ The HTTP server listens on port `3000` by default. Set `PORT` to use a different
 
 ## Commands
 
-The default command prefix is `!smusic`, unless it has been changed in the project configuration.
+Commands are available as Discord slash commands and are registered automatically when the bot starts. Set `DISCORD_GUILD_ID` for immediate registration in one server; if it is omitted, commands are registered globally.
 
 | Command | Description |
 | --- | --- |
-| `!smusic play <query>` | Searches for and plays a track or video. |
-| `!smusic skip` | Skips the current track. |
-| `!smusic pause` | Pauses playback. |
-| `!smusic resume` | Resumes playback. |
-| `!smusic queue` | Displays the current queue. |
-| `!smusic clear` | Removes all pending tracks from the queue. |
-| `!smusic volume <1-100>` | Changes the playback volume. |
-| `!smusic stats` | Displays bot runtime statistics. |
+| `/play <query>` | Searches for and plays a track, playlist, or media URL. |
+| `/skip` | Skips the current track. |
+| `/pause` | Pauses playback. |
+| `/resume` | Resumes playback. |
+| `/queue view` | Displays the current queue. |
+| `/queue clear` | Removes all pending tracks from the queue. |
+| `/volume <level>` | Changes the playback volume. |
+| `/now` | Displays the currently playing track. |
+| `/history` | Displays recent playback history. |
+| `/help` | Displays the available commands. |
 
 ## Environment variables
 
 | Variable | Required | Description |
 | --- | --- | --- |
 | `DISCORD_TOKEN` | Yes | Token used to authenticate the Discord bot. |
+| `DISCORD_GUILD_ID` | No | Server ID used for immediate slash command registration. Omit it to register commands globally. |
 | `YOUTUBE_COOKIE` | No | Cookie header used when YouTube requires an authenticated session or additional verification. |
 | `PORT` | No | HTTP port for the dashboard. Defaults to `3000`. |
 

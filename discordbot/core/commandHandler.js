@@ -1,5 +1,6 @@
 import { errorEmbed } from '../utils/embeds.js';
 import { logError } from '../utils/logger.js';
+import { getArguments, interactionMessage } from './slashCommands.js';
 
 const commands = new Map();
 
@@ -7,36 +8,30 @@ export function registerCommand(name, handler) {
     commands.set(name.toLowerCase(), handler);
 }
 
-export async function handleMessage(message) {
-    let content = message.content.trim();
-    if (content.startsWith('!audio ')) {
-        content = '!smusic ' + content.slice(1);
+async function executeCommand(name, message, args) {
+    const handler = commands.get(name.toLowerCase());
+    if (handler) {
+        await handler(message, args);
+        return;
     }
 
-    if (!content.startsWith('!smusic ')) return;
+    const playHandler = commands.get('play');
+    if (playHandler) await playHandler(message, [name, ...args]);
+}
 
-    const args = content.slice('!smusic'.length).trim().split(/ +/);
-    if (args.length === 0) return;
+export async function handleInteraction(interaction) {
+    const message = interactionMessage(interaction);
+    const args = getArguments(interaction);
 
-    const commandName = args[0].toLowerCase();
-    const handler = commands.get(commandName);
-
-    if (handler) {
-        try {
-            await handler(message, args.slice(1));
-        } catch (e) {
-            logError(e);
-            await message.reply({ embeds: [errorEmbed(`Error executing command: ${e.message}`)] }).catch(() => {});
-        }
-    } else {
-        const playHandler = commands.get('play');
-        if (playHandler) {
-            try {
-                await playHandler(message, args);
-            } catch (e) {
-                logError(e);
-                await message.reply({ embeds: [errorEmbed(`Error executing command: ${e.message}`)] }).catch(() => {});
-            }
+    try {
+        await executeCommand(interaction.commandName, message, args);
+    } catch (e) {
+        logError(e);
+        const payload = { embeds: [errorEmbed(`Error executing command: ${e.message}`)], ephemeral: true };
+        if (interaction.replied || interaction.deferred) {
+            await interaction.followUp(payload).catch(() => {});
+        } else {
+            await interaction.reply(payload).catch(() => {});
         }
     }
 }

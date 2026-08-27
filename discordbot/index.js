@@ -12,7 +12,8 @@ import { Client, GatewayIntentBits } from 'discord.js';
 import express from 'express';
 
 import { initSession, loadSavedCredentials, watchCredentials } from './core/sessionManager.js';
-import { handleMessage, registerCommand } from './core/commandHandler.js';
+import { handleInteraction, registerCommand } from './core/commandHandler.js';
+import { registerSlashCommands } from './core/slashCommands.js';
 import { handleAuth } from './auth/auth.js';
 import { playbackCommands } from './commands/playback.js';
 import { handlePlayCommand } from './commands/play.js';
@@ -128,6 +129,7 @@ initLavalink(client);
 
 client.on('ready', async () => {
     logInfo(`Bot logged in as ${client.user.tag}`);
+    await registerSlashCommands(client, logInfo);
     // Coba load credentials lagi setelah bot ready
     // (kadang file sudah ada tapi session belum sempat sign in)
     const loaded = await loadSavedCredentials()
@@ -138,9 +140,9 @@ client.on('ready', async () => {
     }
 });
 
-client.on('messageCreate', async (message) => {
-    if (message.author.bot) return;
-    await handleMessage(message);
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
+    await handleInteraction(interaction);
 });
 
 // Global error handler

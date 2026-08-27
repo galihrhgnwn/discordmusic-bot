@@ -18,7 +18,7 @@ async function requireLogin(message) {
       new EmbedBuilder()
         .setDescription(
           `❌ You need to connect your YouTube account first.\n` +
-          `Run \`!smusic auth login\` to get started.`
+          `Run \`/auth login\` to get started.`
         )
         .setColor(0xFF0000)
         .setFooter({ text: 'smusic bot' })
@@ -46,9 +46,9 @@ export async function handlePlaylist(message, args) {
     default:
       return message.reply({ embeds: [errorEmbed(
         'Usage:\n' +
-        '`!smusic playlist` — List your playlists\n' +
-        '`!smusic playlist play <nama>` — Play a playlist\n' +
-        '`!smusic playlist search <nama>` — Search playlist by name'
+        '`/playlist list` — List your playlists\n' +
+        '`/playlist play <nama>` — Play a playlist\n' +
+        '`/playlist search <nama>` — Search playlist by name'
       )] })
   }
 }
@@ -118,7 +118,7 @@ async function fetchUserPlaylists(yt) {
   }
 }
 
-// !smusic playlist / !smusic playlist list
+// /playlist list / /playlist list list
 async function handlePlaylistList(message, userId) {
   if (!await requireLogin(message)) return
 
@@ -187,14 +187,14 @@ async function handlePlaylistList(message, userId) {
   }
 }
 
-// !smusic playlist play <nama atau ID>
+// /playlist play <nama atau ID>
 async function handlePlaylistPlay(message, userId, query) {
   if (!await requireLogin(message)) return
   if (!userInVoice(message)) {
     return message.reply({ embeds: [errorEmbed('Join a voice channel first')] })
   }
   if (!query) {
-    return message.reply({ embeds: [errorEmbed('Provide a playlist name. Usage: `!smusic playlist play <nama>`')] })
+    return message.reply({ embeds: [errorEmbed('Provide a playlist name. Usage: `/playlist play <nama>`')] })
   }
 
   const loading = await message.reply({ embeds: [infoEmbed('⏳ Searching your playlists...')] })
@@ -211,7 +211,7 @@ async function handlePlaylistPlay(message, userId, query) {
     if (!match) {
       return loading.edit({ embeds: [errorEmbed(
         `Playlist "${query}" not found in your library.\n` +
-        `Run \`!smusic playlist\` to see your playlists.`
+        `Run \`/playlist list\` to see your playlists.`
       )] })
     }
 
@@ -224,7 +224,7 @@ async function handlePlaylistPlay(message, userId, query) {
   }
 }
 
-// !smusic playlist search <nama>
+// /playlist search <nama>
 async function handlePlaylistSearch(message, userId, query) {
   if (!await requireLogin(message)) return
   if (!query) {

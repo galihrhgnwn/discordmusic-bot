@@ -3,7 +3,7 @@ import { ExternalLink, ShieldCheck, Activity, Box, Zap, Settings, Command } from
 import LiveConsole from '../components/LiveConsole';
 
 export default function Dashboard() {
-  const inviteUrl = "https://discord.com/oauth2/authorize?client_id=1505788906992308246&scope=bot&permissions=8";
+  const inviteUrl = "https://discord.com/oauth2/authorize?client_id=1505788906992308246&scope=bot%20applications.commands&permissions=8";
   
   return (
     <div className="min-h-screen bg-neutral-950 flex flex-col items-center">
@@ -146,7 +146,7 @@ export default function Dashboard() {
 
                   <div className="flex justify-between items-center py-2 border-b border-white/5">
                     <span className="text-sm text-neutral-400">Prefix</span>
-                    <span className="text-sm font-mono bg-white/10 px-2 py-0.5 rounded text-neutral-200">!smusic</span>
+                    <span className="text-sm font-mono bg-white/10 px-2 py-0.5 rounded text-neutral-200">/</span>
                   </div>
 
                   <div className="flex justify-between items-center py-2">

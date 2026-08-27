@@ -4,7 +4,7 @@ import { switchBackend, voiceChannelMap } from '../core/player.js';
 
 export async function handleAudioCommand(message, args) {
     if (args[0] !== 'source') {
-        return; // we only handle `!smusic audio source`
+        return; // we only handle `/audio source`
     }
 
     const guildId = message.guild.id;

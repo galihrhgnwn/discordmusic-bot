@@ -98,7 +98,7 @@ function CookieAuthPageContent() {
         <h2 className="text-xl font-semibold mb-2">Link Tidak Valid</h2>
         <p className="text-neutral-400 text-sm">
           Link ini tidak memiliki token yang valid.<br />
-          Jalankan <code className="text-red-400 bg-red-400/10 px-1 py-0.5 rounded">!smusic auth login</code> di Discord untuk mendapatkan link baru.
+          Jalankan <code className="text-red-400 bg-red-400/10 px-1 py-0.5 rounded">/auth login</code> di Discord untuk mendapatkan link baru.
         </p>
       </div>
     </div>
