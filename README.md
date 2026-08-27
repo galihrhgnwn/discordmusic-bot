@@ -1,121 +1,133 @@
-# Aether's Discord Music Bot
+# Smusic Bot
 
-Aether's is a Discord music bot with a web dashboard for playback control, queue management, and runtime monitoring. The project combines a Node.js Discord bot with a Next.js dashboard in a single application.
+Smusic Bot adalah bot Discord berbasis Node.js untuk memutar audio dari YouTube dan sumber media terkait. Project ini berjalan sebagai bot Discord saja; tidak ada dashboard web atau server frontend yang perlu dijalankan.
 
-## Features
+## Fitur
 
-### Audio playback
+- Pemutaran lagu, playlist, dan URL media melalui slash command.
+- Queue per server dengan dukungan skip, pause, resume, loop, autoplay, shuffle, dan pengaturan volume.
+- Downloader berbasis backend PytubeDL dengan fallback ke `youtubei.js` dan `yt-search` untuk pencarian metadata.
+- Dukungan backend audio Default dan Lavalink.
+- Penyimpanan cache audio lokal dengan batas ukuran yang dikendalikan oleh cache manager.
+- Registrasi slash command otomatis secara global ketika bot berhasil login ke Discord.
 
-The bot uses `@discordjs/voice` and FFmpeg to stream audio to Discord voice channels. It supports searches, playlists, queue management, looping, pause and resume, skipping, volume control, and automatic cleanup when a queue becomes idle.
+## Persyaratan
 
-### Session and cookie handling
+- Node.js 20 atau lebih baru.
+- FFmpeg tersedia di `PATH`, atau gunakan binary dari `ffmpeg-static`.
+- Discord application dengan bot token yang valid.
+- Untuk backend Lavalink, siapkan node Lavalink dan kredensialnya.
 
-The bot uses `youtubei.js` to retrieve media information and supports a configurable `YOUTUBE_COOKIE` value for environments where YouTube requires an authenticated session or applies additional request restrictions.
-
-### Web dashboard
-
-The dashboard is built with Next.js, React, Tailwind CSS, and Framer Motion. It provides runtime statistics and a live console powered by Server-Sent Events. The backend forwards selected application and Discord logs to the dashboard through the `/api/logs` route.
-
-## Project structure
-
-| Path | Purpose |
-| --- | --- |
-| `discordbot/index.js` | Starts the bot and application server. |
-| `discordbot/commands/` | Contains command implementations. |
-| `core/player.js` | Manages audio playback and voice connection state. |
-| `downloader.js` | Handles media download streams. |
-| `app/` | Contains the Next.js dashboard routes and pages. |
-| `components/` | Contains reusable dashboard components, including the live console. |
-
-The bot and dashboard share the same application process and port. This keeps deployment simple while retaining a clear separation between Discord functionality, audio processing, and web presentation.
-
-## Requirements
-
-Before running the project, install the following dependencies:
-
-- Node.js 20 or 22.
-- FFmpeg available in the system `PATH`. The project also includes `ffmpeg-static` as a fallback dependency.
-- A Discord application with a bot token and the following intents enabled: Message Content, Guilds, and Guild Voice States.
-
-Create and configure the bot through the [Discord Developer Portal](https://discord.com/developers/applications).
-
-## Installation
-
-Clone the repository and install its dependencies:
+## Instalasi
 
 ```bash
 git clone https://github.com/galihrhgnwn/discordmusic-bot.git
 cd discordmusic-bot
 npm install
-```
-
-Copy the environment template and fill in the required values:
-
-```bash
 cp .env.example .env
 ```
 
-At minimum, set `DISCORD_TOKEN` in `.env` before starting the bot.
+Isi `DISCORD_TOKEN` pada `.env`. Jangan commit file `.env` atau kredensial apa pun ke repository.
 
-## Running the application
-
-The included bootstrap script provides two startup modes:
+## Menjalankan Bot
 
 ```bash
-chmod +x install.sh
-./install.sh
+npm run bot
 ```
 
-Choose **Bot Only** when the web dashboard is not needed or when the host has limited resources. Choose **Bot and Dashboard** to run the complete application.
+Script tersebut menjalankan `discordbot/index.js` dalam mode produksi. Bot tidak lagi menjalankan Next.js, Express, atau dashboard HTTP.
 
-The same modes are available through npm scripts:
+## Slash Commands
 
-| Command | Description |
+Slash command didaftarkan otomatis ke aplikasi Discord saat bot login. Karena registrasinya global, perubahan command dapat membutuhkan waktu propagasi sebelum terlihat di semua server.
+
+| Command | Keterangan |
 | --- | --- |
-| `npm run dev` | Starts the application in development mode. |
-| `npm run build` | Builds the Next.js dashboard. |
-| `npm run start` | Starts the bot and dashboard. |
-| `BOT_ONLY=true npm run start` | Starts the bot without the dashboard. |
+| `/play query:<judul atau URL>` | Memutar lagu atau playlist. |
+| `/chart` | Menampilkan chart musik berdasarkan region dan genre. |
+| `/playlist list` | Menampilkan playlist yang tersedia. |
+| `/playlist play query:<nama>` | Memutar playlist. |
+| `/playlist search query:<kata kunci>` | Mencari playlist. |
+| `/pause` | Menjeda pemutaran. |
+| `/resume` | Melanjutkan pemutaran. |
+| `/skip` | Melewati lagu aktif. |
+| `/stop` | Menghentikan pemutaran dan mengosongkan queue. |
+| `/queue view` | Melihat queue. |
+| `/queue clear` | Mengosongkan queue. |
+| `/queue remove index:<nomor>` | Menghapus item dari queue. |
+| `/volume level:<1-100>` | Mengatur volume. |
+| `/quality level:<low|medium|high|lossless>` | Mengatur kualitas audio. |
+| `/loop` | Mengaktifkan atau menonaktifkan loop. |
+| `/autoplay` | Mengaktifkan atau menonaktifkan autoplay. |
+| `/shuffle` | Mengacak queue. |
+| `/now` | Menampilkan lagu yang sedang diputar. |
+| `/history` | Menampilkan riwayat pemutaran. |
+| `/download` | Mengunduh lagu aktif. |
+| `/recommend` | Menampilkan rekomendasi berdasarkan lagu aktif. |
+| `/keepjoin` | Menjaga bot tetap berada di voice channel. |
+| `/quitjoin` | Menonaktifkan mode persistent voice channel. |
+| `/audio source:<default|lavalink>` | Mengganti backend audio. |
+| `/help` | Menampilkan daftar command. |
 
-The HTTP server listens on port `3000` by default. Set `PORT` to use a different port.
+## Environment Variables
 
-## Commands
-
-Commands are available as Discord slash commands and are registered automatically when the bot starts. Set `DISCORD_GUILD_ID` for immediate registration in one server; if it is omitted, commands are registered globally.
-
-| Command | Description |
-| --- | --- |
-| `/play <query>` | Searches for and plays a track, playlist, or media URL. |
-| `/skip` | Skips the current track. |
-| `/pause` | Pauses playback. |
-| `/resume` | Resumes playback. |
-| `/queue view` | Displays the current queue. |
-| `/queue clear` | Removes all pending tracks from the queue. |
-| `/volume <level>` | Changes the playback volume. |
-| `/now` | Displays the currently playing track. |
-| `/history` | Displays recent playback history. |
-| `/help` | Displays the available commands. |
-
-## Environment variables
-
-| Variable | Required | Description |
+| Variable | Wajib | Keterangan |
 | --- | --- | --- |
-| `DISCORD_TOKEN` | Yes | Token used to authenticate the Discord bot. |
-| `DISCORD_GUILD_ID` | No | Server ID used for immediate slash command registration. Omit it to register commands globally. |
-| `YOUTUBE_COOKIE` | No | Cookie header used when YouTube requires an authenticated session or additional verification. |
-| `PORT` | No | HTTP port for the dashboard. Defaults to `3000`. |
+| `DISCORD_TOKEN` | Ya | Token bot dari Discord Developer Portal. |
+| `PYTUBE_API_URL` | Tidak | Endpoint downloader. Default: `http://dono-03.danbot.host:1386`. |
+| `LAVALINK_URL` | Tidak | URL node Lavalink. |
+| `LAVALINK_AUTH` | Tidak | Password atau authorization node Lavalink. |
+| `LAVALINK_NAME` | Tidak | Nama node Lavalink. |
+| `LAVALINK_SECURE` | Tidak | Isi `true` jika node menggunakan koneksi TLS. |
+| `BOT_OWNER_ID` | Tidak | Discord user ID pemilik bot. |
 
-Keep `.env` private and do not commit credentials to the repository.
+## Backend Downloader
+
+Downloader memakai endpoint berikut pada backend PytubeDL:
+
+```text
+GET /api/info?url=<youtube-url>
+GET /api/download?url=<youtube-url>&itag=<itag>
+```
+
+Endpoint default dapat diganti tanpa mengubah source code:
+
+```env
+PYTUBE_API_URL="http://dono-03.danbot.host:1386"
+```
+
+## Pengembangan
+
+Jalankan lint sebelum membuat perubahan:
+
+```bash
+npm run lint
+```
+
+Pastikan working tree bersih dan tidak ada kredensial, cache runtime, atau file eksperimen yang ikut ter-commit.
+
+## Lisensi
+
+Project ini dikelola untuk penggunaan pribadi dan eksperimen. Pastikan penggunaan sumber media mematuhi ketentuan layanan dan hukum yang berlaku.
+
+> Jangan bagikan `DISCORD_TOKEN`, cookie YouTube, atau kredensial backend melalui chat, issue, atau commit Git.
+
+## Struktur Project
+
+```text
+discordbot/
+├── commands/       Slash command handlers
+├── core/           Player, queue, downloader, session, dan registrasi command
+├── auth/           Utilitas auth lama yang tidak dipakai untuk startup bot
+└── utils/          Cache, logger, permission, dan helper lainnya
+```
+
+Dashboard web telah dihapus dari project. Runtime utama sekarang hanya `discordbot/index.js`.
 
 ## Troubleshooting
 
-If the bot joins a voice channel but does not play audio, verify that FFmpeg is installed and available through the system `PATH`. The dashboard logs can provide additional details about media and voice connection errors.
+Jika bot gagal login, periksa `DISCORD_TOKEN` dan pastikan bot sudah diundang ke server dengan scope `bot` dan `applications.commands`.
 
-If the dashboard reports that it is disconnected, confirm that the Node.js process is still running and that the HTTP server is reachable. The live console depends on the application's Server-Sent Events endpoint.
+Jika audio gagal diputar, pastikan FFmpeg tersedia dan endpoint `PYTUBE_API_URL` dapat diakses dari server bot. Untuk backend Lavalink, pastikan `LAVALINK_URL`, `LAVALINK_AUTH`, dan konfigurasi TLS sesuai dengan node yang digunakan.
 
-If YouTube asks the user to sign in or confirm their age, provide a current `YOUTUBE_COOKIE` value in `.env` and restart the application.
-
-## References
-
-[1]: https://discord.com/developers/applications "Discord Developer Portal"
-[2]: https://github.com/galihrhgnwn/discordmusic-bot "Aether's Discord Music Bot repository"
+Jika slash command belum terlihat, tunggu propagasi registrasi global Discord atau hapus dan undang ulang bot dengan scope `applications.commands`.

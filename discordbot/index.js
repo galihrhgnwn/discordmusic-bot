@@ -1,6 +1,5 @@
 import 'dotenv/config';
 import fs from 'fs';
-import crypto from 'crypto';
 
 const [major] = process.versions.node.split('.').map(Number);
 if (major < 20) {
@@ -9,12 +8,10 @@ if (major < 20) {
 }
 
 import { Client, GatewayIntentBits } from 'discord.js';
-import express from 'express';
 
 import { initSession, loadSavedCredentials, watchCredentials } from './core/sessionManager.js';
 import { handleInteraction, registerCommand } from './core/commandHandler.js';
 import { registerSlashCommands } from './core/slashCommands.js';
-import { handleAuth } from './auth/auth.js';
 import { playbackCommands } from './commands/playback.js';
 import { handlePlayCommand } from './commands/play.js';
 import { handleChart } from './commands/charts.js';
@@ -25,7 +22,7 @@ import { connectionMap } from './core/player.js';
 import { stopPlayer } from './core/player.js';
 import { preloadAllSessions, cleanupExpiredTokens } from './core/userSessionManager.js';
 import { initLavalink } from './core/lavalinkManager.js';
-import { addLogListener, removeLogListener, logInfo, logError } from './utils/logger.js';
+import { logInfo, logError } from './utils/logger.js';
 
 // Create folders on start if they do not exist
 const folders = [
@@ -38,71 +35,7 @@ for (const folder of folders) {
   }
 }
 
-// Setup Next.js + Express server for dashboard & healthchecks
-import next from 'next';
-const dev = process.env.NODE_ENV !== 'production';
-const isBotOnly = process.env.BOT_ONLY === 'true';
-
-let nextApp;
-let handle;
-
-if (!isBotOnly) {
-    nextApp = next({ dev });
-    handle = nextApp.getRequestHandler();
-}
-
-const app = express();
-const port = process.env.PORT || 3000;
-
-app.get('/api/logs', (req, res) => {
-    const secret = req.query.secret || '';
-    const configuredSecret = process.env.DASHBOARD_SECRET || '';
-
-    // Check if DASHBOARD_SECRET is configured
-    if (!process.env.DASHBOARD_SECRET) {
-        return res.status(401).send('Unauthorized: DASHBOARD_SECRET not configured');
-    }
-
-    // Use timingSafeEqual to prevent timing attacks
-    let isAuthorized = false;
-    try {
-        const secretBuffer = Buffer.from(secret);
-        const configuredSecretBuffer = Buffer.from(configuredSecret);
-
-        if (secretBuffer.length === configuredSecretBuffer.length) {
-            isAuthorized = crypto.timingSafeEqual(secretBuffer, configuredSecretBuffer);
-        }
-    } catch (e) {
-        // Handle any buffer creation errors
-    }
-
-    if (!isAuthorized) {
-        return res.status(401).send('Unauthorized: Invalid DASHBOARD_SECRET');
-    }
-
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    
-    // Send an initial connected message
-    res.write(`data: ${JSON.stringify({ type: 'log', message: '[System] Connected to dashboard live console.', time: new Date().toISOString() })}\n\n`);
-
-    const listener = (data) => res.write(`data: ${data}\n\n`);
-    addLogListener(listener);
-    req.on('close', () => {
-        removeLogListener(listener);
-    });
-});
-
-app.all(/.*/, (req, res) => {
-    if (isBotOnly) {
-        return res.status(200).send('Bot is running (Dashboard disabled)');
-    }
-    return handle(req, res);
-});
-
 // Register commands
-registerCommand('auth', handleAuth);
 registerCommand('play', handlePlayCommand);
 registerCommand('chart', handleChart);
 registerCommand('playlist', handlePlaylist);
@@ -136,7 +69,7 @@ client.on('ready', async () => {
     if (loaded) {
       logInfo('[Bot] ✅ YouTube session active')
     } else {
-      logInfo('[Bot] ℹ️ No credentials — login via dashboard')
+      logInfo('[Bot] ℹ️ No credentials — running without a global YouTube session')
     }
 });
 
@@ -165,22 +98,13 @@ process.on('SIGINT', async () => {
 });
 
 async function main() {
-    if (!isBotOnly) {
-        await nextApp.prepare();
-    }
-    app.listen(port, () => {
-        logInfo(`HTTP server listening on port ${port} (Dashboard: ${!isBotOnly ? 'Enabled' : 'Disabled'})`);
-    });
-
     for (const dir of ['./auth', './auth/users', './auth/pending', './auth/cookies', './cache', './data']) {
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
     }
 
-    // Run cleanup without blocking startup
-    cleanupExpiredTokens().catch(err => console.error('[PendingAuth] Initial cleanup error:', err));
-    setInterval(() => {
-        cleanupExpiredTokens().catch(err => console.error('[PendingAuth] Periodic cleanup error:', err));
-    }, 60 * 60 * 1000);
+    // Cleanup is synchronous and must not be chained with .catch().
+    cleanupExpiredTokens();
+    setInterval(cleanupExpiredTokens, 60 * 60 * 1000);
 
     await initSession();
     const loaded = await loadSavedCredentials();
