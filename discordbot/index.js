@@ -12,6 +12,8 @@ import { Client, GatewayIntentBits } from 'discord.js';
 import { initSession, loadSavedCredentials, watchCredentials } from './core/sessionManager.js';
 import { handleInteraction, registerCommand } from './core/commandHandler.js';
 import { registerSlashCommands } from './core/slashCommands.js';
+import { handleAuth } from './auth/auth.js';
+import { startAuthWebServer } from './auth/webAuthServer.js';
 import { playbackCommands } from './commands/playback.js';
 import { handlePlayCommand } from './commands/play.js';
 import { handleChart } from './commands/charts.js';
@@ -34,6 +36,7 @@ for (const folder of folders) {
 }
 
 // Register commands
+registerCommand('auth', handleAuth);
 registerCommand('play', handlePlayCommand);
 registerCommand('chart', handleChart);
 registerCommand('playlist', handlePlaylist);
@@ -93,6 +96,8 @@ process.on('SIGINT', async () => {
 });
 
 async function main() {
+    startAuthWebServer();
+
     for (const dir of ['./auth', './auth/users', './auth/pending', './auth/cookies', './cache', './data']) {
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
     }

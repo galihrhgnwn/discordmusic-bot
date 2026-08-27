@@ -46,6 +46,9 @@ Slash command didaftarkan otomatis ke aplikasi Discord saat bot login. Karena re
 | `/playlist list` | Menampilkan playlist yang tersedia. |
 | `/playlist play query:<nama>` | Memutar playlist. |
 | `/playlist search query:<kata kunci>` | Mencari playlist. |
+| `/auth login` | Mengirim link HTML untuk menghubungkan akun YouTube secara personal. |
+| `/auth status` | Memeriksa status koneksi akun YouTube. |
+| `/auth logout` | Memutuskan koneksi akun YouTube. |
 | `/pause` | Menjeda pemutaran. |
 | `/resume` | Melanjutkan pemutaran. |
 | `/skip` | Melewati lagu aktif. |
@@ -71,8 +74,19 @@ Slash command didaftarkan otomatis ke aplikasi Discord saat bot login. Karena re
 | Variable | Wajib | Keterangan |
 | --- | --- | --- |
 | `DISCORD_TOKEN` | Ya | Token bot dari Discord Developer Portal. |
+| `AUTH_WEB_URL` | Tidak | URL publik halaman HTML auth. Default: `http://localhost:25557`. |
 | `PYTUBE_API_URL` | Tidak | Endpoint downloader. Default: `http://dono-03.danbot.host:1386`. |
 | `BOT_OWNER_ID` | Tidak | Discord user ID pemilik bot. |
+
+## YouTube Authentication
+
+Login YouTube bersifat opsional. Jalankan `/auth login` di Discord untuk menerima link HTML pribadi. Buka link tersebut, masukkan cookie Netscape dari browser, lalu kirim formulir untuk memvalidasi dan menyimpan sesi akun. Link auth berlaku selama 30 menit dan sebaiknya hanya dibuka melalui URL yang kamu kontrol.
+
+Atur `AUTH_WEB_URL` ke alamat publik server bot jika link akan dibuka dari perangkat lain:
+
+```env
+AUTH_WEB_URL="https://bot.example.com"
+```
 
 ## Backend Downloader
 

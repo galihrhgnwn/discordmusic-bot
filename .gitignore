@@ -6,7 +6,13 @@ coverage/
 .env*
 !.env.example
 .auth/
-auth/
+auth/*
+!auth/auth.js
+!auth/webAuthServer.js
+!auth/cookie.html
+auth/users/
+auth/pending/
+auth/cookies/
 cache/
 data/
 .ytcache/

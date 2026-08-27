@@ -10,12 +10,17 @@ export const slashCommands = [
     .setDescription('Browse trending music')
     .addStringOption(option => option.setName('region').setDescription('Chart region code, for example US').setRequired(false))
     .addStringOption(option => option.setName('genre').setDescription('Chart genre').setRequired(false)),
-  new SlashCommandBuilder()
-    .setName('playlist')
+  new SlashCommandBuilder().setName('playlist')
     .setDescription('Manage your YouTube Music playlists')
     .addSubcommand(sub => sub.setName('list').setDescription('List your playlists'))
     .addSubcommand(sub => sub.setName('play').setDescription('Play a playlist').addStringOption(option => option.setName('query').setDescription('Playlist name').setRequired(true)))
     .addSubcommand(sub => sub.setName('search').setDescription('Search for playlists').addStringOption(option => option.setName('query').setDescription('Search query').setRequired(true))),
+  new SlashCommandBuilder()
+    .setName('auth')
+    .setDescription('Manage your YouTube Music session')
+    .addSubcommand(sub => sub.setName('login').setDescription('Connect your YouTube Music account'))
+    .addSubcommand(sub => sub.setName('status').setDescription('Check your session status'))
+    .addSubcommand(sub => sub.setName('logout').setDescription('Disconnect your account')),
   new SlashCommandBuilder().setName('download').setDescription('Download the current song'),
   new SlashCommandBuilder().setName('recommend').setDescription('Get recommendations based on the current song'),
   new SlashCommandBuilder().setName('help').setDescription('Show the command list'),
@@ -61,6 +66,7 @@ function getArguments(interaction) {
     const query = options.getString('query');
     return query ? [subcommand, query] : [subcommand];
   }
+  if (name === 'auth') return [options.getSubcommand(false)];
   if (name === 'volume') return [String(options.getInteger('level'))];
   if (name === 'quality') return [options.getString('level')];
   if (name === 'queue') {
