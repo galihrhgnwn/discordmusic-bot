@@ -21,13 +21,6 @@ export const slashCommands = [
   new SlashCommandBuilder().setName('help').setDescription('Show the command list'),
   new SlashCommandBuilder().setName('keepjoin').setDescription('Keep the bot in the voice channel'),
   new SlashCommandBuilder().setName('quitjoin').setDescription('Disable persistent voice channel mode'),
-  new SlashCommandBuilder()
-    .setName('audio')
-    .setDescription('Choose the audio backend')
-    .addStringOption(option => option.setName('source').setDescription('Audio backend').setRequired(true).addChoices(
-      { name: 'Default', value: 'default' },
-      { name: 'Lavalink', value: 'lavalink' }
-    )),
   new SlashCommandBuilder().setName('pause').setDescription('Pause playback'),
   new SlashCommandBuilder().setName('resume').setDescription('Resume playback'),
   new SlashCommandBuilder().setName('skip').setDescription('Skip the current song'),
@@ -68,7 +61,6 @@ function getArguments(interaction) {
     const query = options.getString('query');
     return query ? [subcommand, query] : [subcommand];
   }
-  if (name === 'audio') return ['source', options.getString('source')];
   if (name === 'volume') return [String(options.getInteger('level'))];
   if (name === 'quality') return [options.getString('level')];
   if (name === 'queue') {

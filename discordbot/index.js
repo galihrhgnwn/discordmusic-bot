@@ -17,11 +17,9 @@ import { handlePlayCommand } from './commands/play.js';
 import { handleChart } from './commands/charts.js';
 import { handlePlaylist } from './commands/playlist.js';
 import { handleDownload, handleRecommend, handleHelp, handleKeepJoin, handleQuitJoin } from './commands/misc.js';
-import { handleAudioCommand } from './commands/audio.js';
 import { connectionMap } from './core/player.js';
 import { stopPlayer } from './core/player.js';
 import { preloadAllSessions, cleanupExpiredTokens } from './core/userSessionManager.js';
-import { initLavalink } from './core/lavalinkManager.js';
 import { logInfo, logError } from './utils/logger.js';
 
 // Create folders on start if they do not exist
@@ -44,7 +42,6 @@ registerCommand('recommend', handleRecommend);
 registerCommand('help', handleHelp);
 registerCommand('keepjoin', handleKeepJoin);
 registerCommand('quitjoin', handleQuitJoin);
-registerCommand('audio', handleAudioCommand);
 for (const [cmd, handler] of Object.entries(playbackCommands)) {
     registerCommand(cmd, handler);
 }
@@ -57,8 +54,6 @@ const client = new Client({
         GatewayIntentBits.MessageContent
     ]
 });
-
-initLavalink(client);
 
 client.on('ready', async () => {
     logInfo(`Bot logged in as ${client.user.tag}`);

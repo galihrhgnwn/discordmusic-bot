@@ -7,7 +7,6 @@ Smusic Bot adalah bot Discord berbasis Node.js untuk memutar audio dari YouTube 
 - Pemutaran lagu, playlist, dan URL media melalui slash command.
 - Queue per server dengan dukungan skip, pause, resume, loop, autoplay, shuffle, dan pengaturan volume.
 - Downloader berbasis backend PytubeDL dengan fallback ke `youtubei.js` dan `yt-search` untuk pencarian metadata.
-- Dukungan backend audio Default dan Lavalink.
 - Penyimpanan cache audio lokal dengan batas ukuran yang dikendalikan oleh cache manager.
 - Registrasi slash command otomatis secara global ketika bot berhasil login ke Discord.
 
@@ -16,7 +15,6 @@ Smusic Bot adalah bot Discord berbasis Node.js untuk memutar audio dari YouTube 
 - Node.js 20 atau lebih baru.
 - FFmpeg tersedia di `PATH`, atau gunakan binary dari `ffmpeg-static`.
 - Discord application dengan bot token yang valid.
-- Untuk backend Lavalink, siapkan node Lavalink dan kredensialnya.
 
 ## Instalasi
 
@@ -66,7 +64,6 @@ Slash command didaftarkan otomatis ke aplikasi Discord saat bot login. Karena re
 | `/recommend` | Menampilkan rekomendasi berdasarkan lagu aktif. |
 | `/keepjoin` | Menjaga bot tetap berada di voice channel. |
 | `/quitjoin` | Menonaktifkan mode persistent voice channel. |
-| `/audio source:<default|lavalink>` | Mengganti backend audio. |
 | `/help` | Menampilkan daftar command. |
 
 ## Environment Variables
@@ -75,10 +72,6 @@ Slash command didaftarkan otomatis ke aplikasi Discord saat bot login. Karena re
 | --- | --- | --- |
 | `DISCORD_TOKEN` | Ya | Token bot dari Discord Developer Portal. |
 | `PYTUBE_API_URL` | Tidak | Endpoint downloader. Default: `http://dono-03.danbot.host:1386`. |
-| `LAVALINK_URL` | Tidak | URL node Lavalink. |
-| `LAVALINK_AUTH` | Tidak | Password atau authorization node Lavalink. |
-| `LAVALINK_NAME` | Tidak | Nama node Lavalink. |
-| `LAVALINK_SECURE` | Tidak | Isi `true` jika node menggunakan koneksi TLS. |
 | `BOT_OWNER_ID` | Tidak | Discord user ID pemilik bot. |
 
 ## Backend Downloader
@@ -128,6 +121,6 @@ Dashboard web telah dihapus dari project. Runtime utama sekarang hanya `discordb
 
 Jika bot gagal login, periksa `DISCORD_TOKEN` dan pastikan bot sudah diundang ke server dengan scope `bot` dan `applications.commands`.
 
-Jika audio gagal diputar, pastikan FFmpeg tersedia dan endpoint `PYTUBE_API_URL` dapat diakses dari server bot. Untuk backend Lavalink, pastikan `LAVALINK_URL`, `LAVALINK_AUTH`, dan konfigurasi TLS sesuai dengan node yang digunakan.
+Jika audio gagal diputar, pastikan FFmpeg tersedia dan endpoint `PYTUBE_API_URL` dapat diakses dari server bot.
 
 Jika slash command belum terlihat, tunggu propagasi registrasi global Discord atau hapus dan undang ulang bot dengan scope `applications.commands`.
