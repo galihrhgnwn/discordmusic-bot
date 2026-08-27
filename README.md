@@ -1,170 +1,118 @@
-# Aether's Discord Bot & Management Dashboard
+# Aether's Discord Music Bot
 
-![Aether's Bot Logo](https://files.catbox.moe/uefsn7.jpg)
+Aether's is a Discord music bot with a web dashboard for playback control, queue management, and runtime monitoring. The project combines a Node.js Discord bot with a Next.js dashboard in a single application.
 
-**Aether's** is a high-performance, feature-rich Discord Music Bot bundled with a sleek, modern, web-based Management Dashboard. Built as a unified monorepo (hybrid architecture), it seamlessly runs a robust Node.js backend for Discord bot operations alongside a stunning Next.js frontend, all within a single application instance.
+## Features
 
-Whether you are a server owner looking for a reliable audio streaming solution or a developer wanting to host a modular Node.js bot, Aether's provides top-tier performance, audio clarity, and administrative ease.
+### Audio playback
 
----
+The bot uses `@discordjs/voice` and FFmpeg to stream audio to Discord voice channels. It supports searches, playlists, queue management, looping, pause and resume, skipping, volume control, and automatic cleanup when a queue becomes idle.
 
-## 🌟 Table of Contents
-1. [Key Features](#-key-features)
-2. [Technical Architecture Deep Dive](#-technical-architecture-deep-dive)
-3. [Prerequisites](#-prerequisites)
-4. [Installation & Setup](#-installation--setup)
-5. [Usage Modes (Bot vs. Both)](#-usage-modes-bot-vs-both)
-6. [Commands Reference](#-commands-reference)
-7. [Environment Variables](#-environment-variables)
-8. [Troubleshooting](#-troubleshooting)
+### Session and cookie handling
 
----
+The bot uses `youtubei.js` to retrieve media information and supports a configurable `YOUTUBE_COOKIE` value for environments where YouTube requires an authenticated session or applies additional request restrictions.
 
-## ✨ Key Features
+### Web dashboard
 
-Aether's is designed with performance, reliability, and aesthetics in mind. It separates command handling, API cookie management, and streaming buffers into distinct logic layers.
+The dashboard is built with Next.js, React, Tailwind CSS, and Framer Motion. It provides runtime statistics and a live console powered by Server-Sent Events. The backend forwards selected application and Discord logs to the dashboard through the `/api/logs` route.
 
-### 🎵 Next-Gen Audio Streaming
-- **High-Quality Playback:** Utilizes `@discordjs/voice` coupled with optimized FFmpeg codecs for a low-latency, uninterrupted audio buffer stream.
-- **Intelligent Queue System:** Supports standard queues, playlist queuing, loop modes, and skipping with memory-efficient local caching. 
-- **Idle Optimization:** If the queue finishes and the bot is idle, the internal state machine gracefully handles connection teardown, automatically leaving the voice channel to preserve memory and CPU cycles.
+## Project structure
 
-### 🛡️ Rotation & Anti-Block Mechanics
-- **Cookie Rotation & Parsing:** YouTube API requests often get blocked physically or rate-limited. Aether's employs `youtubei.js` and a dedicated cookie rotation scheduler to bypass generic IP blocks and age-restriction firewalls.
-- **Automated Session Refresh:** The session manager dynamically cleans out stale connections and refreshes authentication tokens in the background.
+| Path | Purpose |
+| --- | --- |
+| `discordbot/index.js` | Starts the bot and application server. |
+| `discordbot/commands/` | Contains command implementations. |
+| `core/player.js` | Manages audio playback and voice connection state. |
+| `downloader.js` | Handles media download streams. |
+| `app/` | Contains the Next.js dashboard routes and pages. |
+| `components/` | Contains reusable dashboard components, including the live console. |
 
-### 🖥️ Premium Web Dashboard
-- **Monolithic Yet Modular:** The front-end (React/Next.js) and the back-end (Express/Discord.js) share the same underlying event loop, port, and deployment pipeline. 
-- **Live Terminal Broadcast (SSE):** Features a distinctive "Live Console" on the dashboard. By intercepting native `console.log` and `console.error` streams, the backend broadcasts live internal server statistics and Discord socket logs directly to your browser using Server-Sent Events (SSE) with near-zero latency.
-- **SaaS-Grade UI/UX:** Styled comprehensively with Tailwind CSS v4 and Framer Motion for glassy, modern aesthetics imitating high-end enterprise SaaS portals. 
+The bot and dashboard share the same application process and port. This keeps deployment simple while retaining a clear separation between Discord functionality, audio processing, and web presentation.
 
----
+## Requirements
 
-## 🏗️ Technical Architecture Deep Dive
+Before running the project, install the following dependencies:
 
-The architectural separation of concerns (SoC) ensures the codebase remains maintainable, scalable, and isolated from unexpected side-effects.
+- Node.js 20 or 22.
+- FFmpeg available in the system `PATH`. The project also includes `ffmpeg-static` as a fallback dependency.
+- A Discord application with a bot token and the following intents enabled: Message Content, Guilds, and Guild Voice States.
 
-### 1. Bot Core & Command Matrix (`/discordbot/core`)
-The entry pipeline starts at `discordbot/index.js`. 
-- **Binding Phase:** The application binds a shared Express server and Next.js instance to port `3000`.
-- **Command Registration:** The `commandHandler.js` dynamically maps all functional components present in `/discordbot/commands/` (e.g., `play.js`, `playback.js`) into an in-memory `Map`. This guarantees **O(1) lookup speeds** during Discord text/slash command execution, eliminating the standard nested-if spaghetti structures common in older bots.
+Create and configure the bot through the [Discord Developer Portal](https://discord.com/developers/applications).
 
-### 2. The Audio Processing Pipeline (`/core/player.js` & `downloader.js`)
-- **Downloader Layer:** Offloads chunk downloading to isolated streams using a combination of fast fetch algorithms.
-- **State Machine Synchronization:** Aether's tracks specific voice connection lifecycles (`Signalling`, `Connecting`, `Ready`, `Buffering`, `Idle`). This granular tracking ensures the bot doesn't get "stuck" in a voice channel visually while technically dead in the backend.
+## Installation
 
-### 3. Next.js Dashboard Frontend (`/app` & `/components`)
-- Developed using **React Server Components (RSC)** where applicable.
-- The `LiveConsole.tsx` client component establishes a persistent connection to the `/api/logs` internal route.
-- Custom fonts (Inter, Space Grotesk) and dynamic SVG iconography (Lucide React) establish a distinct identity.
+Clone the repository and install its dependencies:
 
----
+```bash
+git clone https://github.com/galihrhgnwn/discordmusic-bot.git
+cd discordmusic-bot
+npm install
+```
 
-## 📦 Prerequisites
+Copy the environment template and fill in the required values:
 
-Before deploying Aether's, ensure your host machine, VPS, or cloud container meets the following environment dependencies:
+```bash
+cp .env.example .env
+```
 
-- **Node.js:** `v20.x` or `v22.x` is highly recommended.
-- **FFmpeg:** Installed globally on your operating system (e.g., `sudo apt install ffmpeg` for Ubuntu). Alternatively, a static binary module (`ffmpeg-static`) is included in the package.json as a fallback.
-- **Discord Bot Credentials:** An active Application instance in the [Discord Developer Portal](https://discord.com/developers/applications) with the requisite token and intents (Message Content, Guilds, Guild Voice States) enabled.
+At minimum, set `DISCORD_TOKEN` in `.env` before starting the bot.
 
----
+## Running the application
 
-## 🚀 Installation & Setup
+The included bootstrap script provides two startup modes:
 
-1. **Clone the Source Repository**
-   ```bash
-   git clone https://github.com/your-username/aethers-bot.git
-   cd aethers-bot
-   ```
-
-2. **Configure Environment Variables**
-   Duplicate the provided configuration template and fill in your keys.
-   ```bash
-   cp .env.example .env
-   ```
-   *Edit the `.env` file using your preferred text editor (nano, vim) and populate the missing fields.*
-
-3. **Install Dependencies**
-   ```bash
-   npm install
-   ```
-
----
-
-## ⚙️ Usage Modes (Bot vs. Both)
-
-Aether's provides an interactive bootstrapper (`install.sh`) to streamline execution, minimizing resource allocation conflicts if you are hosting on low-tier hardware.
-
-Make the script executable and run it:
 ```bash
 chmod +x install.sh
 ./install.sh
 ```
 
-You will be greeted with an interactive prompt offering two modes:
+Choose **Bot Only** when the web dashboard is not needed or when the host has limited resources. Choose **Bot and Dashboard** to run the complete application.
 
-### 1) Run Bot Only (Minimal RAM Usage)
-- Triggers the `BOT_ONLY=true` environmental flag.
-- Skips initializing the Next.js framework engine completely.
-- The Express server acts solely as a silent health-check API (`/` route) returning a `200 OK` connection string.
-- *Best for: VPS environments with < 1GB RAM or cloud edge deployments.*
+The same modes are available through npm scripts:
 
-### 2) Run Both (Bot + Web Dashboard)
-- Compiles the Next.js production chunks via `npm run build`.
-- Binds the web frontend rendering engine over the active bot processes.
-- The Live Console, statistics, and UI routing are served over the master port.
-- *Best for: Comprehensive monitoring and deployment on standard servers/containers.*
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Starts the application in development mode. |
+| `npm run build` | Builds the Next.js dashboard. |
+| `npm run start` | Starts the bot and dashboard. |
+| `BOT_ONLY=true npm run start` | Starts the bot without the dashboard. |
 
-**Manual NPM Execution (Alternative to install.sh):**
-- Development Mode: `npm run dev`
-- Build Dashboard: `npm run build`
-- Start Full Services: `npm run start` 
-- Start Bot Only: `BOT_ONLY=true npm run start`
+The HTTP server listens on port `3000` by default. Set `PORT` to use a different port.
 
----
+## Commands
 
-## 📖 Commands Reference
+The default command prefix is `!smusic`, unless it has been changed in the project configuration.
 
-Once invited and active in your server, use the default prefix `!smusic` (can be configured) followed by the command:
+| Command | Description |
+| --- | --- |
+| `!smusic play <query>` | Searches for and plays a track or video. |
+| `!smusic skip` | Skips the current track. |
+| `!smusic pause` | Pauses playback. |
+| `!smusic resume` | Resumes playback. |
+| `!smusic queue` | Displays the current queue. |
+| `!smusic clear` | Removes all pending tracks from the queue. |
+| `!smusic volume <1-100>` | Changes the playback volume. |
+| `!smusic stats` | Displays bot runtime statistics. |
 
-* **Playback:**
-  - `!smusic play <query>` - Searches and plays a track/video.
-  - `!smusic skip` - Skips the current track in the active queue.
-  - `!smusic pause` / `!smusic resume` - Freezes or unfreezes the current audio chunk.
-* **Queue Management:**
-  - `!smusic queue` - Displays all upcoming tracks in sequence. 
-  - `!smusic clear` - Flushes the entire queue.
-* **Utility:**
-  - `!smusic volume <1-100>` - Modifies global playback amplitude.
-  - `!smusic stats` - Returns localized bot heartbeat and module load variables.
+## Environment variables
 
----
+| Variable | Required | Description |
+| --- | --- | --- |
+| `DISCORD_TOKEN` | Yes | Token used to authenticate the Discord bot. |
+| `YOUTUBE_COOKIE` | No | Cookie header used when YouTube requires an authenticated session or additional verification. |
+| `PORT` | No | HTTP port for the dashboard. Defaults to `3000`. |
 
-## 🔐 Environment Variables
+Keep `.env` private and do not commit credentials to the repository.
 
-Reference the table below when configuring your `.env` instance:
+## Troubleshooting
 
-| Variable | Requirement | Description |
-| :--- | :---: | :--- |
-| `DISCORD_TOKEN` | **Required** | Provides standard REST/Socket access for your specific bot user. |
-| `YOUTUBE_COOKIE` | Optional | A stringified header cookie sequence required to bypass 429 rate-limits or age-restrictions imposed by YouTube API interfaces. |
-| `PORT` | Optional | Defaults to `3000`. Overrides the binding port for the Web Dashboard. |
+If the bot joins a voice channel but does not play audio, verify that FFmpeg is installed and available through the system `PATH`. The dashboard logs can provide additional details about media and voice connection errors.
 
----
+If the dashboard reports that it is disconnected, confirm that the Node.js process is still running and that the HTTP server is reachable. The live console depends on the application's Server-Sent Events endpoint.
 
-## 🛠️ Troubleshooting
+If YouTube asks the user to sign in or confirm their age, provide a current `YOUTUBE_COOKIE` value in `.env` and restart the application.
 
-**Issue:** *The bot joints the voice channel but no audio is transmitted.*
-- **Fix:** Ensure FFmpeg is present in your system's PATH. If using Windows, manually append the path to the executable logic. Check your console logs (via the Web Dashboard) for `ffmpeg_error` markers.
+## References
 
-**Issue:** *The Dashboard shows "Disconnected" in the upper right.*
-- **Fix:** Ensure the Node server hasn't crashed. The Server-Sent Events stream depends on an active HTTP layer. If playing videos heavily buffers, your machine's CPU might be locking Node's single thread.
-
-**Issue:** *YouTube returns "Sign-in to confirm your age".*
-- **Fix:** You must generate a fresh `YOUTUBE_COOKIE` from a regular incognito session (preferable) logged into a verified Google account, and append it faithfully to your `.env` configuration.
-
----
-
-*Engineered with clean architectural principles. Elevate your server's soundstage.*
-
+[1]: https://discord.com/developers/applications "Discord Developer Portal"
+[2]: https://github.com/galihrhgnwn/discordmusic-bot "Aether's Discord Music Bot repository"
