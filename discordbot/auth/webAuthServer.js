@@ -3,7 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { Innertube } from 'youtubei.js'
-import { consumePendingAuth, saveUserCookie } from '../core/userSessionManager.js'
+import { consumePendingAuth, normalizeCookieHeader, saveUserCookie } from '../core/userSessionManager.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const htmlPath = path.join(__dirname, 'cookie.html')
@@ -33,7 +33,8 @@ async function handleCookieSubmission(req, res) {
   try {
     const body = JSON.parse(await readBody(req))
     const token = typeof body.token === 'string' ? body.token : ''
-    const cookie = typeof body.cookie === 'string' ? body.cookie.trim() : ''
+    const cookieInput = typeof body.cookie === 'string' ? body.cookie.trim() : ''
+    const cookie = normalizeCookieHeader(cookieInput)
     if (!token || !cookie) return sendJson(res, 400, { error: 'Token and cookie are required' })
 
     const authRequest = consumePendingAuth(token)

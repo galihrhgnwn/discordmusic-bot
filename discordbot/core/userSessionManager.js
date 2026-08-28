@@ -20,6 +20,41 @@ const USERS_DIR = path.resolve('./auth/users')
 
 const sessionMap = new Map()
 
+export function normalizeCookieHeader(cookieInput) {
+  if (typeof cookieInput !== 'string') return ''
+
+  const input = cookieInput.replace(/\r/g, '')
+  const lines = input.split('\n')
+  const cookies = []
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim()
+    if (!line || line.startsWith('#')) continue
+
+    const fields = rawLine.split('\t')
+    if (fields.length >= 7) {
+      const name = fields[5].trim()
+      const value = fields.slice(6).join('\t').trim()
+      if (name && value && !/[\r\n;=]/.test(name) && !/[\r\n]/.test(value)) {
+        cookies.push(`${name}=${value}`)
+      }
+      continue
+    }
+
+    for (const pair of line.replace(/^Cookie:\s*/i, '').split(';')) {
+      const separator = pair.indexOf('=')
+      if (separator <= 0) continue
+      const name = pair.slice(0, separator).trim()
+      const value = pair.slice(separator + 1).trim()
+      if (name && !/[\r\n;=]/.test(name) && !/[\r\n]/.test(value)) {
+        cookies.push(`${name}=${value}`)
+      }
+    }
+  }
+
+  return [...new Map(cookies.map(cookie => [cookie.slice(0, cookie.indexOf('=')), cookie])).values()].join('; ')
+}
+
 function getUserDir(userId) {
   return path.join(USERS_DIR, userId)
 }
@@ -58,8 +93,13 @@ export async function getUserSession(userId) {
   if (fs.existsSync(getCookieFile(userId))) {
     try {
       const { cookie } = JSON.parse(fs.readFileSync(getCookieFile(userId), 'utf-8'))
+      const normalizedCookie = normalizeCookieHeader(cookie)
+      if (!normalizedCookie) throw new Error('Saved cookie does not contain valid cookie pairs')
+      if (normalizedCookie !== cookie) {
+        fs.writeFileSync(getCookieFile(userId), JSON.stringify({ cookie: normalizedCookie }, null, 2))
+      }
       const yt = await Innertube.create({
-        cookie,
+        cookie: normalizedCookie,
         generate_session_locally: true,
         retrieve_player: true
       })
@@ -103,7 +143,9 @@ export function saveUserCookie(userId, cookieString, profile) {
   const dir = getUserDir(userId)
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
 
-  fs.writeFileSync(getCookieFile(userId), JSON.stringify({ cookie: cookieString }, null, 2))
+  const normalizedCookie = normalizeCookieHeader(cookieString)
+  if (!normalizedCookie) throw new Error('Cookie data does not contain valid cookie pairs')
+  fs.writeFileSync(getCookieFile(userId), JSON.stringify({ cookie: normalizedCookie }, null, 2))
   fs.writeFileSync(getProfileFile(userId), JSON.stringify(profile, null, 2))
 
   sessionMap.delete(userId)

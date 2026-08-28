@@ -38,7 +38,9 @@ npm run bot
 
 The bot starts the Discord client and a small HTTP server for the optional HTML authentication flow. It does not run a dashboard or a Next.js application.
 
-## Slash Commands
+## Commands
+
+Every command is available through both Discord slash commands and the `!` message prefix. For example, use `/play query:lofi` or `!play lofi`.
 
 | Command | Description |
 | --- | --- |

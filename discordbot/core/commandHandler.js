@@ -35,3 +35,25 @@ export async function handleInteraction(interaction) {
         }
     }
 }
+
+function messageArguments(content) {
+    return content.match(/[^\s"]+|"[^"]*"/g)?.map(value =>
+        value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1) : value
+    ) || [];
+}
+
+export async function handleMessage(message) {
+    if (!message || message.author?.bot || typeof message.content !== 'string') return;
+    if (!message.content.startsWith('!')) return;
+
+    const parts = messageArguments(message.content.slice(1).trim());
+    const name = parts.shift()?.toLowerCase();
+    if (!name || !commands.has(name)) return;
+
+    try {
+        await executeCommand(name, message, parts);
+    } catch (e) {
+        logError(e);
+        await message.reply({ embeds: [errorEmbed(`Error executing command: ${e.message}`)] }).catch(() => {});
+    }
+}

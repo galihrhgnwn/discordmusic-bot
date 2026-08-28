@@ -10,7 +10,7 @@ if (major < 20) {
 import { Client, GatewayIntentBits } from 'discord.js';
 
 import { initSession, loadSavedCredentials, watchCredentials } from './core/sessionManager.js';
-import { handleInteraction, registerCommand } from './core/commandHandler.js';
+import { handleInteraction, handleMessage, registerCommand } from './core/commandHandler.js';
 import { registerSlashCommands } from './core/slashCommands.js';
 import { handleAuth } from './auth/auth.js';
 import { startAuthWebServer } from './auth/webAuthServer.js';
@@ -70,6 +70,10 @@ client.on('ready', async () => {
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
     await handleInteraction(interaction);
+});
+
+client.on('messageCreate', async (message) => {
+    await handleMessage(message);
 });
 
 process.on('unhandledRejection', (error) => {
