@@ -64,8 +64,10 @@ function textValue(value, fallback = '') {
 
 async function fetchUserPlaylists(yt) {
   try {
-    const feed = await yt.music.getPlaylists()
-    const playlists = Array.from(feed?.playlists || [])
+    const library = await yt.music.getLibrary()
+    const playlistSection = library?.playlists_section
+      || library?.sections?.find(section => section.type === 'PLAYLISTS')
+    const playlists = Array.from(playlistSection?.contents || [])
 
     return playlists
       .filter(playlist => playlist?.id)
