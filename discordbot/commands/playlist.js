@@ -52,65 +52,38 @@ export async function handlePlaylist(message, args) {
   }
 }
 
+function textValue(value, fallback = '') {
+  if (typeof value === 'string') return value
+  if (value?.text) return value.text
+  if (value?.runs) return value.runs.map(run => run.text || '').join('')
+  if (typeof value?.toString === 'function' && value.toString() !== '[object Object]') {
+    return value.toString()
+  }
+  return fallback
+}
+
 async function fetchUserPlaylists(yt) {
   try {
-    const result = await yt.music.getLibraryPlaylists()
-    const contents = result?.contents || []
+    const feed = await yt.music.getPlaylists()
+    const playlists = Array.from(feed?.playlists || [])
 
-    return contents
-      .filter(p => p && (p.id || p.playlist_id))
+    return playlists
+      .filter(playlist => playlist?.id)
       .slice(0, 50)
-      .map(p => ({
-        id: p.id || p.playlist_id || '',
-        title: (() => {
-          if (typeof p.title === 'string') return p.title
-          if (p.title?.text) return p.title.text
-          if (p.title?.runs) return p.title.runs.map(r => r.text).join('')
-          return 'Unknown Playlist'
-        })(),
+      .map(playlist => ({
+        id: playlist.id,
+        title: textValue(playlist.title, 'Unknown Playlist'),
         subtitle: {
-          text: (() => {
-            if (typeof p.subtitle === 'string') return p.subtitle
-            if (p.subtitle?.text) return p.subtitle.text
-            if (p.subtitle?.runs) return p.subtitle.runs.map(r => r.text).join('')
-            if (p.song_count) return `${p.song_count} songs`
-            if (p.item_count) return `${p.item_count} songs`
-            return ''
-          })()
+          text: textValue(
+            playlist.video_count_short || playlist.video_count,
+            ''
+          )
         }
       }))
-      .filter(p => p.id && p.title)
-
-  } catch (e) {
-    console.error('[Playlist] fetchUserPlaylists error:', e.message)
-
-    try {
-      const library = await yt.music.getLibrary()
-      const items = []
-
-      if (library?.contents && Array.isArray(library.contents)) {
-        for (const section of library.contents) {
-          const sectionItems = section?.contents || section?.items || []
-          if (Array.isArray(sectionItems)) {
-            items.push(...sectionItems)
-          }
-        }
-      }
-
-      return items
-        .filter(i => i && (i.id || i.playlist_id))
-        .slice(0, 50)
-        .map(i => ({
-          id: i.id || i.playlist_id || '',
-          title: i.title?.text || i.title || i.name || 'Unknown',
-          subtitle: { text: i.subtitle?.text || i.item_count || '' }
-        }))
-        .filter(p => p.id)
-
-    } catch (e2) {
-      console.error('[Playlist] Fallback also failed:', e2.message)
-      throw new Error(`Cannot fetch playlists: ${e2.message}`)
-    }
+      .filter(playlist => playlist.id && playlist.title)
+  } catch (error) {
+    console.error('[Playlist] fetchUserPlaylists error:', error.message)
+    throw new Error(`Cannot fetch playlists: ${error.message}`)
   }
 }
 

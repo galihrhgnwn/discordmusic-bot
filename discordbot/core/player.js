@@ -105,6 +105,7 @@ export async function playSong(guildId, voiceChannel, textChannel) {
           finishedSong.requesterId
         )
       } else {
+        updateVoiceChannelStatus(voiceChannelMap.get(guildId)?.id, '')
         textChannelMap.get(guildId)?.send({
           embeds: [infoEmbed(' Queue ended.')]
         }).catch(() => {})
@@ -143,9 +144,9 @@ export async function playSong(guildId, voiceChannel, textChannel) {
     resource.volume.setVolume(volume / 100)
   }
 
+  updateVoiceChannelStatus(voiceChannel.id, song.title)
   player.play(resource)
   connection.subscribe(player)
-  updateVoiceChannelStatus(voiceChannel.id, song.title)
   clearIdleTimer(guildId)
 
   songStartMap.set(guildId, Date.now())
