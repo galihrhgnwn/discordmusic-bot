@@ -62,27 +62,47 @@ function textValue(value, fallback = '') {
   return fallback
 }
 
+function normalizePlaylists(playlists) {
+  return Array.from(playlists || [])
+    .filter(playlist => playlist && (playlist.id || playlist.playlist_id || playlist.playlistId))
+    .slice(0, 50)
+    .map(playlist => ({
+      id: playlist.id || playlist.playlist_id || playlist.playlistId,
+      title: textValue(playlist.title || playlist.name, 'Unknown Playlist'),
+      subtitle: {
+        text: textValue(
+          playlist.video_count_short
+            || playlist.video_count
+            || playlist.song_count
+            || playlist.item_count,
+          ''
+        )
+      }
+    }))
+    .filter(playlist => playlist.id && playlist.title)
+}
+
 async function fetchUserPlaylists(yt) {
   try {
-    const library = await yt.music.getLibrary()
-    const playlistSection = library?.playlists_section
-      || library?.sections?.find(section => section.type === 'PLAYLISTS')
-    const playlists = Array.from(playlistSection?.contents || [])
+    if (typeof yt?.getPlaylists === 'function') {
+      const feed = await yt.getPlaylists()
+      const playlists = normalizePlaylists(feed?.playlists)
+      if (playlists.length) return playlists
+    }
 
-    return playlists
-      .filter(playlist => playlist?.id)
-      .slice(0, 50)
-      .map(playlist => ({
-        id: playlist.id,
-        title: textValue(playlist.title, 'Unknown Playlist'),
-        subtitle: {
-          text: textValue(
-            playlist.video_count_short || playlist.video_count,
-            ''
-          )
-        }
-      }))
-      .filter(playlist => playlist.id && playlist.title)
+    if (typeof yt?.music?.getLibrary === 'function') {
+      const library = await yt.music.getLibrary()
+      const playlistSection = library?.playlists_section
+        || library?.sections?.find(section => section.type === 'PLAYLISTS')
+      const playlists = normalizePlaylists(
+        playlistSection?.contents
+          || library?.contents
+          || library?.sections?.flatMap(section => section.contents || [])
+      )
+      if (playlists.length) return playlists
+    }
+
+    throw new Error('No compatible playlist API returned any playlists')
   } catch (error) {
     console.error('[Playlist] fetchUserPlaylists error:', error.message)
     throw new Error(`Cannot fetch playlists: ${error.message}`)
