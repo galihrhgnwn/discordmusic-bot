@@ -11,7 +11,7 @@ export async function setVoiceChannelStatus(channelId, status) {
 
   try {
     const response = await fetch(`${DISCORD_API}/channels/${channelId}/voice-status`, {
-      method: 'PATCH',
+      method: 'PUT',
       headers: {
         Authorization: `Bot ${token}`,
         'Content-Type': 'application/json'
