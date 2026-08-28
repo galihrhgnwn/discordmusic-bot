@@ -37,7 +37,7 @@ Run the bot directly:
 npm run bot
 ```
 
-The bot starts the Discord client and a small HTTP server for the optional HTML authentication flow. It does not run a dashboard or a Next.js application. When playback starts, the bot updates the connected voice channel status to `Now playing: <song title>` and clears it when playback stops.
+The bot starts the Discord client and a small HTTP server for the optional HTML authentication flow. It does not run a dashboard or a Next.js application. When playback starts, the bot updates the connected voice channel status to `Now playing: <song title>`. When playback stops or the queue becomes empty, it changes the status to `Not playing anything`.
 
 ## Commands
 

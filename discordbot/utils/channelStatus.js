@@ -33,6 +33,6 @@ export async function setVoiceChannelStatus(channelId, status) {
 }
 
 export function updateVoiceChannelStatus(channelId, title) {
-  const status = title ? `Now playing: ${title}` : ''
+  const status = title ? `Now playing: ${title}` : 'Not playing anything'
   setVoiceChannelStatus(channelId, status).catch(() => {})
 }
