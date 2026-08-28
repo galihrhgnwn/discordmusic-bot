@@ -10,6 +10,7 @@ A Discord music bot built with Node.js and Discord.js. It plays YouTube audio in
 - Local audio caching with a configurable cache manager.
 - Global slash command registration when the bot logs in.
 - Optional personal YouTube Music sessions through a simple HTML cookie page.
+- Automatic voice channel status updates showing the current song title.
 
 ## Requirements
 
@@ -36,7 +37,7 @@ Run the bot directly:
 npm run bot
 ```
 
-The bot starts the Discord client and a small HTTP server for the optional HTML authentication flow. It does not run a dashboard or a Next.js application.
+The bot starts the Discord client and a small HTTP server for the optional HTML authentication flow. It does not run a dashboard or a Next.js application. When playback starts, the bot updates the connected voice channel status to `Now playing: <song title>` and clears it when playback stops.
 
 ## Commands
 
@@ -132,6 +133,8 @@ The runtime entry point is `discordbot/index.js`.
 If the bot cannot log in, check `DISCORD_TOKEN` and confirm that the bot was invited with the `bot` and `applications.commands` scopes.
 
 If audio cannot be played, make sure FFmpeg is available and that `PYTUBE_API_URL` is reachable from the bot server.
+
+If the voice channel status does not change, grant the bot `SET_VOICE_CHANNEL_STATUS`. Discord may also require `MANAGE_CHANNELS` depending on channel ownership.
 
 If slash commands are not visible, wait for global Discord registration to propagate or use `DISCORD_GUILD_ID` for immediate registration during development.
 

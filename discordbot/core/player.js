@@ -12,6 +12,7 @@ import { nowPlayingEmbed, infoEmbed, errorEmbed } from '../utils/embeds.js'
 import { getConfig } from '../utils/serverConfig.js'
 import { isAutoplay, setAutoplay } from './autoplayManager.js'
 import { handleAutoplay } from './autoplay.js'
+import { updateVoiceChannelStatus } from '../utils/channelStatus.js'
 
 export const playerMap       = new Map()
 export const connectionMap   = new Map()
@@ -31,6 +32,7 @@ function getStreamType(filePath) {
 export async function playSong(guildId, voiceChannel, textChannel) {
   const song = queue.getCurrentSong(guildId)
   if (!song) {
+    updateVoiceChannelStatus(voiceChannelMap.get(guildId)?.id, '')
     textChannel.send({ embeds: [infoEmbed(' Queue ended.')] }).catch(() => {})
     scheduleDisconnect(guildId, textChannel)
     return
@@ -143,6 +145,7 @@ export async function playSong(guildId, voiceChannel, textChannel) {
 
   player.play(resource)
   connection.subscribe(player)
+  updateVoiceChannelStatus(voiceChannel.id, song.title)
   clearIdleTimer(guildId)
 
   songStartMap.set(guildId, Date.now())
@@ -213,6 +216,7 @@ export function getSongStartTime(guildId) {
 }
 
 export function destroyConnection(guildId) {
+  updateVoiceChannelStatus(voiceChannelMap.get(guildId)?.id, '')
   connectionMap.get(guildId)?.destroy()
   connectionMap.delete(guildId)
   playerMap.delete(guildId)
