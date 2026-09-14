@@ -93,7 +93,7 @@ export async function searchSongs(rawQuery, requesterId = null) {
         const secs = v.duration?.seconds || 0
         return secs >= 30 && secs <= 600
       })
-      .slice(0, 10)
+      .slice(0, 20)
       .map(v => ({
         videoId: v.videoId,
         title: v.title,
@@ -121,7 +121,7 @@ export async function searchSongs(rawQuery, requesterId = null) {
   }
 
   results.sort((a, b) => (b.views || 0) - (a.views || 0))
-  return results.slice(0, 5)
+  return results.slice(0, 20)
 }
 
 export function formatViews(views) {

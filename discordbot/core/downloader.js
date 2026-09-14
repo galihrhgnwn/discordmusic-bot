@@ -1,12 +1,9 @@
-import fs from 'fs'
-import path from 'path'
-import { hasCache, getCachePath, enforceLimit } from '../utils/cacheManager.js'
 import { getSession } from './sessionManager.js'
 
 const PYTUBE_API = process.env.PYTUBE_API_URL || 'http://dono-03.danbot.host:1386'
+const AUDIO_ITAG = process.env.PYTUBE_AUDIO_ITAG || '140'
 
 export const sourceMap = new Map()
-
 
 async function getInfoFromAPI(videoId) {
   const url = `https://www.youtube.com/watch?v=${videoId}`
@@ -27,82 +24,44 @@ async function getInfoFromAPI(videoId) {
   return data
 }
 
-
-async function downloadViaPytube(videoId) {
+/**
+ * Opens the remote media proxy and returns its response body as a live stream.
+ * Nothing is downloaded to disk; the PytubeDL server proxies the selected format.
+ */
+export async function streamSong(videoId, _quality = 'high', _startTime = null, _requesterId = null) {
   const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`
-  const downloadUrl = `${PYTUBE_API}/api/download/audio?url=${encodeURIComponent(youtubeUrl)}&format=m4a`
-  console.log(`[PytubeDL] Downloading audio for ${videoId}`)
+  const streamUrl = `${PYTUBE_API}/api/stream?url=${encodeURIComponent(youtubeUrl)}&itag=${encodeURIComponent(AUDIO_ITAG)}`
 
-  let res
-  let retries = 2
-  while (retries >= 0) {
+  let lastError
+  for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      res = await fetch(downloadUrl, {
-        signal: AbortSignal.timeout(180000)
+      const res = await fetch(streamUrl, {
+        signal: AbortSignal.timeout(30000),
+        headers: { accept: 'audio/*,application/octet-stream' }
       })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      break
-    } catch (e) {
-      if (retries === 0) throw new Error(`Audio download failed: ${e.message}`)
-      console.warn(`[PytubeDL] /api/download/audio failed, retrying... (${e.message})`)
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      retries--
+
+      if (!res.ok || !res.body) {
+        throw new Error(`HTTP ${res.status}`)
+      }
+
+      sourceMap.set(videoId, `pytubedl-stream:${AUDIO_ITAG}`)
+      console.log(`[PytubeDL] Streaming ${videoId} via /api/stream (itag ${AUDIO_ITAG})`)
+      return {
+        body: res.body,
+        contentType: res.headers.get('content-type') || 'application/octet-stream',
+        streamUrl
+      }
+    } catch (error) {
+      lastError = error
+      if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 1000))
     }
   }
 
-  const contentType = res.headers.get('content-type') || ''
-  const ext = contentType.includes('webm') ? 'webm' : 'm4a'
-  const filePath = `./cache/${videoId}.${ext}`
-  const writeStream = fs.createWriteStream(filePath)
-  const reader = res.body.getReader()
-
-  await new Promise((resolve, reject) => {
-    const pump = () => reader.read()
-      .then(({ done, value }) => {
-        if (done) {
-          writeStream.end(resolve)
-          return
-        }
-        if (!writeStream.write(Buffer.from(value))) {
-          writeStream.once('drain', pump)
-        } else {
-          pump()
-        }
-      })
-      .catch(error => {
-        writeStream.destroy()
-        reject(error)
-      })
-    pump()
-  })
-
-  if (!fs.existsSync(filePath) || fs.statSync(filePath).size < 10000) {
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
-    throw new Error('Downloaded file too small or missing')
-  }
-
-  const sizeMB = (fs.statSync(filePath).size / 1024 / 1024).toFixed(2)
-  console.log(`[PytubeDL] Downloaded ${videoId}  ${sizeMB}MB`)
-  sourceMap.set(videoId, 'pytube')
-  return { filePath }
+  throw new Error(`Audio stream failed: ${lastError?.message || 'unknown error'}`)
 }
 
-
-export async function downloadSong(videoId, quality, startTime = null, requesterId = null) {
-  if (hasCache(videoId)) {
-    console.log(`[Downloader] Cache hit: ${videoId}`)
-    return { filePath: getCachePath(videoId) }
-  }
-
-  try {
-    const result = await downloadViaPytube(videoId)
-    enforceLimit()
-    return result
-  } catch (e) {
-    throw new Error(`Download failed for ${videoId}: ${e.message}`)
-  }
-}
-
+// Kept as a compatibility alias for callers outside the player.
+export const downloadSong = streamSong
 
 export async function getVideoInfo(urlOrId) {
   let videoId
@@ -158,4 +117,12 @@ export async function getVideoInfo(urlOrId) {
     url: `https://www.youtube.com/watch?v=${videoId}`,
     author: result.author?.name || ''
   }
+}
+
+export function getAudioItag() {
+  return AUDIO_ITAG
+}
+
+export function getPytubeApiUrl() {
+  return PYTUBE_API
 }

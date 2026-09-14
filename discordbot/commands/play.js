@@ -195,9 +195,12 @@ async function handleSearch(message, input) {
         .setLabel(String(i + 1))
         .setStyle(ButtonStyle.Secondary)
     );
-    const row = new ActionRowBuilder().addComponents(buttons);
+    const rows = [];
+    for (let i = 0; i < buttons.length; i += 5) {
+      rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 5)));
+    }
 
-    const reply = await message.reply({ embeds: [embed], components: [row] });
+    const reply = await message.reply({ embeds: [embed], components: rows });
 
     const filter = i => i.user.id === message.author.id && i.customId.startsWith('pick_');
     const collector = reply.createMessageComponentCollector({ filter, time: 30000, max: 1 });
@@ -206,10 +209,13 @@ async function handleSearch(message, input) {
       const index = parseInt(interaction.customId.replace('pick_', ''), 10);
       const picked = results[index];
 
-      const disabledRow = new ActionRowBuilder().addComponents(
-        buttons.map(b => ButtonBuilder.from(b).setDisabled(true))
-      );
-      await interaction.update({ components: [disabledRow] });
+      const disabledRows = [];
+      for (let i = 0; i < buttons.length; i += 5) {
+        disabledRows.push(new ActionRowBuilder().addComponents(
+          buttons.slice(i, i + 5).map(b => ButtonBuilder.from(b).setDisabled(true))
+        ));
+      }
+      await interaction.update({ components: disabledRows });
 
       const guildId = message.guild.id;
       const voiceChannel = message.member.voice.channel;
@@ -239,10 +245,13 @@ async function handleSearch(message, input) {
 
     collector.on('end', (collected, reason) => {
       if (reason === 'time') {
-        const disabledRow = new ActionRowBuilder().addComponents(
-          buttons.map(b => ButtonBuilder.from(b).setDisabled(true))
-        );
-        reply.edit({ components: [disabledRow] }).catch(() => {});
+        const disabledRows = [];
+        for (let i = 0; i < buttons.length; i += 5) {
+          disabledRows.push(new ActionRowBuilder().addComponents(
+            buttons.slice(i, i + 5).map(b => ButtonBuilder.from(b).setDisabled(true))
+          ));
+        }
+        reply.edit({ components: disabledRows }).catch(() => {});
       }
     });
   } catch (e) {

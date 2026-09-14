@@ -83,26 +83,28 @@ function normalizePlaylists(playlists) {
 }
 
 async function fetchUserPlaylists(yt) {
+  const candidates = []
   try {
     if (typeof yt?.getPlaylists === 'function') {
       const feed = await yt.getPlaylists()
-      const playlists = normalizePlaylists(feed?.playlists)
-      if (playlists.length) return playlists
+      // youtubei.js returns a Feed; playlists is a getter, not playlists.contents.
+      candidates.push(feed?.playlists, feed?.page_contents?.contents)
     }
 
     if (typeof yt?.music?.getLibrary === 'function') {
       const library = await yt.music.getLibrary()
-      const playlistSection = library?.playlists_section
-        || library?.sections?.find(section => section.type === 'PLAYLISTS')
-      const playlists = normalizePlaylists(
-        playlistSection?.contents
-          || library?.contents
-          || library?.sections?.flatMap(section => section.contents || [])
+      // Current YouTube Music Library exposes Grid/MusicShelf objects in contents.
+      const shelves = Array.from(library?.contents || [])
+      candidates.push(
+        library?.playlists,
+        library?.playlists_section?.contents,
+        ...shelves.map(section => section?.contents || section?.items || [])
       )
-      if (playlists.length) return playlists
     }
 
-    throw new Error('No compatible playlist API returned any playlists')
+    const playlists = normalizePlaylists(candidates.flatMap(items => Array.from(items || [])))
+    if (playlists.length) return playlists
+    throw new Error('No playlists found in the authenticated YouTube account')
   } catch (error) {
     console.error('[Playlist] fetchUserPlaylists error:', error.message)
     throw new Error(`Cannot fetch playlists: ${error.message}`)
@@ -291,7 +293,7 @@ async function loadAndQueuePlaylist(message, userId, playlistId, playlistTitle, 
   try {
     const yt = await getUserSession(userId)
     const pl = await yt.music.getPlaylist(playlistId)
-    const songs = pl?.contents || pl?.tracks || []
+    const songs = pl?.contents || pl?.tracks || pl?.videos || pl?.first_videos || []
 
     if (!songs.length) {
       const embed = errorEmbed('This playlist is empty.')

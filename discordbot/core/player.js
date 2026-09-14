@@ -1,12 +1,11 @@
 import { joinVoiceChannel, createAudioPlayer, createAudioResource,
          AudioPlayerStatus, StreamType, VoiceConnectionStatus } from '@discordjs/voice'
-import { createReadStream } from 'fs'
-import fs from 'fs'
+import { Readable } from 'stream'
 import ffmpegPath from 'ffmpeg-static'
 
 if (ffmpegPath) process.env.FFMPEG_PATH = ffmpegPath
 
-import { downloadSong } from './downloader.js'
+import { streamSong } from './downloader.js'
 import * as queue from './queue.js'
 import { nowPlayingEmbed, infoEmbed, errorEmbed } from '../utils/embeds.js'
 import { getConfig } from '../utils/serverConfig.js'
@@ -21,13 +20,6 @@ export const songStartMap    = new Map()
 export const voiceChannelMap = new Map()
 export const textChannelMap  = new Map()
 export const keepJoinMap     = new Map()
-
-function getStreamType(filePath) {
-  if (!filePath) return StreamType.Arbitrary
-  if (filePath.endsWith('.webm')) return StreamType.WebmOpus
-  if (filePath.endsWith('.opus')) return StreamType.OggOpus
-  return StreamType.Arbitrary
-}
 
 export async function playSong(guildId, voiceChannel, textChannel) {
   const song = queue.getCurrentSong(guildId)
@@ -51,13 +43,13 @@ export async function playSong(guildId, voiceChannel, textChannel) {
     connectionMap.set(guildId, connection)
   }
 
-  let downloadResult
+  let streamResult
   try {
     const { sourceMap } = await import('./downloader.js')
-    downloadResult = await downloadSong(song.videoId, song.quality, song.startTime, song.requesterId)
+    streamResult = await streamSong(song.videoId, song.quality, song.startTime, song.requesterId)
     song.source = sourceMap.get(song.videoId) || 'unknown'
   } catch (e) {
-    textChannel.send({ embeds: [errorEmbed(` Download failed: ${e.message}`)] }).catch(() => {})
+    textChannel.send({ embeds: [errorEmbed(` Stream failed: ${e.message}`)] }).catch(() => {})
     queue.skipSong(guildId)
     return playSong(guildId, voiceChannel, textChannel)
   }
@@ -129,15 +121,10 @@ export async function playSong(guildId, voiceChannel, textChannel) {
 
   const { volume } = getConfig(guildId)
 
-  const filePath = downloadResult.filePath
-  if (!filePath || !fs.existsSync(filePath)) {
-    throw new Error(`Audio file not found: ${filePath}`)
-  }
-  const input = createReadStream(filePath)
-  const streamType = getStreamType(filePath)
+  const input = Readable.fromWeb(streamResult.body)
 
   const resource = createAudioResource(input, {
-    inputType: streamType,
+    inputType: StreamType.Arbitrary,
     inlineVolume: true
   })
   if (resource.volume) {
@@ -150,12 +137,6 @@ export async function playSong(guildId, voiceChannel, textChannel) {
   clearIdleTimer(guildId)
 
   songStartMap.set(guildId, Date.now())
-
-  const nextSong = queue.getQueue(guildId)[1]
-  if (nextSong) {
-    downloadSong(nextSong.videoId, nextSong.quality, nextSong.startTime, nextSong.requesterId)
-      .catch(e => console.warn('[Player] Pre-download failed:', e.message))
-  }
 
   const currentQueue = queue.getQueue(guildId)
   const extra = {
