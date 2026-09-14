@@ -7,7 +7,12 @@ import { getConfig } from '../utils/serverConfig.js';
 import { getVideoInfo } from '../core/downloader.js';
 import { addToQueue } from '../core/queue.js';
 import { getPlayerState, playSong } from '../core/player.js';
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
+import {
+  ActionRowBuilder,
+  EmbedBuilder,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder
+} from 'discord.js';
 import { isOnCooldown, setCooldown, getRemainingSeconds } from '../utils/cooldown.js';
 
 function preCheck(message) {
@@ -189,33 +194,29 @@ async function handleSearch(message, input) {
       .setColor(0xFF0000)
       .setFooter({ text: 'Pick a song  Times out in 30s  smusic bot' });
 
-    const buttons = results.map((_, i) =>
-      new ButtonBuilder()
-        .setCustomId(`pick_${i}`)
-        .setLabel(String(i + 1))
-        .setStyle(ButtonStyle.Secondary)
+    const options = results.slice(0, 25).map((v, i) =>
+      new StringSelectMenuOptionBuilder()
+        .setLabel(`${i + 1}. ${v.title}`.slice(0, 100))
+        .setDescription(`${v.author || 'YouTube'}  ${v.durationStr || '?:??'}`.slice(0, 100))
+        .setValue(String(i))
     );
-    const rows = [];
-    for (let i = 0; i < buttons.length; i += 5) {
-      rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 5)));
-    }
+    const selectMenu = new StringSelectMenuBuilder()
+      .setCustomId('play_search_select')
+      .setPlaceholder('Pilih lagu untuk diputar')
+      .addOptions(options);
+    const row = new ActionRowBuilder().addComponents(selectMenu);
 
-    const reply = await message.reply({ embeds: [embed], components: rows });
+    const reply = await message.reply({ embeds: [embed], components: [row] });
 
-    const filter = i => i.user.id === message.author.id && i.customId.startsWith('pick_');
+    const filter = i => i.user.id === message.author.id && i.customId === 'play_search_select';
     const collector = reply.createMessageComponentCollector({ filter, time: 30000, max: 1 });
 
     collector.on('collect', async interaction => {
-      const index = parseInt(interaction.customId.replace('pick_', ''), 10);
+      const index = Number.parseInt(interaction.values[0], 10);
       const picked = results[index];
 
-      const disabledRows = [];
-      for (let i = 0; i < buttons.length; i += 5) {
-        disabledRows.push(new ActionRowBuilder().addComponents(
-          buttons.slice(i, i + 5).map(b => ButtonBuilder.from(b).setDisabled(true))
-        ));
-      }
-      await interaction.update({ components: disabledRows });
+      selectMenu.setDisabled(true);
+      await interaction.update({ components: [new ActionRowBuilder().addComponents(selectMenu)] });
 
       const guildId = message.guild.id;
       const voiceChannel = message.member.voice.channel;
@@ -225,7 +226,7 @@ async function handleSearch(message, input) {
         videoId: picked.videoId,
         title: picked.title,
         url: picked.url,
-        duration: picked.duration.seconds,
+        duration: picked.duration || 0,
         thumbnail: picked.thumbnail?.url || '',
         requester: message.author.tag,
         requesterId: message.author.id,
@@ -245,13 +246,8 @@ async function handleSearch(message, input) {
 
     collector.on('end', (collected, reason) => {
       if (reason === 'time') {
-        const disabledRows = [];
-        for (let i = 0; i < buttons.length; i += 5) {
-          disabledRows.push(new ActionRowBuilder().addComponents(
-            buttons.slice(i, i + 5).map(b => ButtonBuilder.from(b).setDisabled(true))
-          ));
-        }
-        reply.edit({ components: disabledRows }).catch(() => {});
+        selectMenu.setDisabled(true);
+        reply.edit({ components: [new ActionRowBuilder().addComponents(selectMenu)] }).catch(() => {});
       }
     });
   } catch (e) {

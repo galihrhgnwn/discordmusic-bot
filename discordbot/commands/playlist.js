@@ -6,7 +6,6 @@ import { infoEmbed, errorEmbed, formatDuration } from '../utils/embeds.js'
 import {
   EmbedBuilder, ActionRowBuilder,
   StringSelectMenuBuilder, StringSelectMenuOptionBuilder,
-  ButtonBuilder, ButtonStyle
 } from 'discord.js'
 import { userInVoice } from '../utils/checkPermissions.js'
 
@@ -54,10 +53,9 @@ export async function handlePlaylist(message, args) {
 
 function textValue(value, fallback = '') {
   if (typeof value === 'string') return value
-  if (value?.text) return value.text
-  if (value?.runs) return value.runs.map(run => run.text || '').join('')
-  if (typeof value?.toString === 'function' && value.toString() !== '[object Object]') {
-    return value.toString()
+  if (typeof value?.text === 'string') return value.text
+  if (Array.isArray(value?.runs)) {
+    return value.runs.map(run => typeof run?.text === 'string' ? run.text : '').join('')
   }
   return fallback
 }
@@ -68,7 +66,7 @@ function normalizePlaylists(playlists) {
     .slice(0, 50)
     .map(playlist => ({
       id: playlist.id || playlist.playlist_id || playlist.playlistId,
-      title: textValue(playlist.title || playlist.name, 'Unknown Playlist'),
+      title: textValue(playlist.title || playlist.name, 'Unknown Playlist').slice(0, 100),
       subtitle: {
         text: textValue(
           playlist.video_count_short
@@ -76,7 +74,7 @@ function normalizePlaylists(playlists) {
             || playlist.song_count
             || playlist.item_count,
           ''
-        )
+        ).slice(0, 100)
       }
     }))
     .filter(playlist => playlist.id && playlist.title)
@@ -102,7 +100,11 @@ async function fetchUserPlaylists(yt) {
       )
     }
 
-    const playlists = normalizePlaylists(candidates.flatMap(items => Array.from(items || [])))
+    const playlists = normalizePlaylists(candidates.flatMap(items => {
+      if (!items) return []
+      if (Array.isArray(items)) return items
+      try { return Array.from(items) } catch { return [] }
+    }))
     if (playlists.length) return playlists
     throw new Error('No playlists found in the authenticated YouTube account')
   } catch (error) {
@@ -243,19 +245,23 @@ async function handlePlaylistSearch(message, userId, query) {
       .setColor(0xFF0000)
       .setFooter({ text: 'smusic bot' })
 
-    const buttons = playlists.slice(0, 5).map((_, i) =>
-      new ButtonBuilder()
-        .setCustomId(`playlist_search_${i}`)
-        .setLabel(String(i + 1))
-        .setStyle(ButtonStyle.Secondary)
+    const options = playlists.slice(0, 25).map((p, i) =>
+      new StringSelectMenuOptionBuilder()
+        .setLabel(`${i + 1}. ${textValue(p.title, 'Unknown')}`.slice(0, 100))
+        .setDescription(`${textValue(p.author?.name || p.author, '')} ${textValue(p.song_count, '')}`.trim().slice(0, 100))
+        .setValue(String(i))
     )
-    const row = new ActionRowBuilder().addComponents(buttons)
+    const selectMenu = new StringSelectMenuBuilder()
+      .setCustomId('playlist_search_select')
+      .setPlaceholder('Pilih playlist untuk diputar')
+      .addOptions(options)
+    const row = new ActionRowBuilder().addComponents(selectMenu)
     const reply = await loading.edit({ embeds: [embed], components: [row] })
 
     const collector = reply.createMessageComponentCollector({
       filter: i =>
         i.user.id === message.author.id &&
-        i.customId.startsWith('playlist_search_'),
+        i.customId === 'playlist_search_select',
       time: 30_000,
       max: 1
     })
@@ -267,18 +273,19 @@ async function handlePlaylistSearch(message, userId, query) {
           ephemeral: true
         })
       }
-      const index = parseInt(interaction.customId.replace('playlist_search_', ''))
+      const index = Number.parseInt(interaction.values[0], 10)
       const picked = playlists[index]
-      const disabledRow = new ActionRowBuilder().addComponents(
-        buttons.map(b => ButtonBuilder.from(b).setDisabled(true))
-      )
-      await interaction.update({ components: [disabledRow] })
+      selectMenu.setDisabled(true)
+      await interaction.update({ components: [new ActionRowBuilder().addComponents(selectMenu)] })
       const playlistId = picked.id || picked.playlist_id
       await loadAndQueuePlaylist(message, userId, playlistId, picked.title, null)
     })
 
     collector.on('end', (_, reason) => {
-      if (reason === 'time') reply.edit({ components: [] }).catch(() => {})
+      if (reason === 'time') {
+        selectMenu.setDisabled(true)
+        reply.edit({ components: [new ActionRowBuilder().addComponents(selectMenu)] }).catch(() => {})
+      }
     })
 
   } catch (e) {

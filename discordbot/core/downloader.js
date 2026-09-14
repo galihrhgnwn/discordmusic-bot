@@ -51,6 +51,21 @@ async function getAudioFormats(youtubeUrl) {
     .sort((a, b) => (Number(b.abr) || 0) - (Number(a.abr) || 0))
 }
 
+async function fetchStreamHeaders(endpoint) {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 30000)
+  try {
+    // The timeout only covers connection/headers. The response body must stay
+    // alive for the entire duration of the song.
+    return await fetch(endpoint, {
+      signal: controller.signal,
+      headers: { accept: 'audio/*,application/octet-stream' }
+    })
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
 /**
  * Opens the remote media proxy and returns its response body as a live stream.
  * The available audio formats are discovered first; no fixed itag is assumed.
@@ -72,10 +87,7 @@ export async function streamSong(videoId, _quality = 'high', _startTime = null, 
 
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const res = await fetch(endpoint, {
-          signal: AbortSignal.timeout(30000),
-          headers: { accept: 'audio/*,application/octet-stream' }
-        })
+        const res = await fetchStreamHeaders(endpoint)
 
         if (!res.ok || !res.body) {
           throw new Error(`HTTP ${res.status}`)
