@@ -16,6 +16,24 @@ export function parsePrefix(rawQuery) {
 
 const MUSIC_KEYWORDS = ['music', 'song', 'lyrics', 'official', 'audio', 'mv']
 
+function normalizeForDuplicate(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFKC')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function removeDuplicateSongs(songs) {
+  const seen = new Set()
+  return songs.filter(song => {
+    const key = `${normalizeForDuplicate(song.title)}::${normalizeForDuplicate(song.author)}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
 export async function searchSongs(rawQuery, requesterId = null) {
   const { mode, cleanQuery } = parsePrefix(rawQuery)
 
@@ -93,7 +111,6 @@ export async function searchSongs(rawQuery, requesterId = null) {
         const secs = v.duration?.seconds || 0
         return secs >= 30 && secs <= 600
       })
-      .slice(0, 20)
       .map(v => ({
         videoId: v.videoId,
         title: v.title,
@@ -120,6 +137,7 @@ export async function searchSongs(rawQuery, requesterId = null) {
     results = results.filter(v => v.duration > 600)
   }
 
+  results = removeDuplicateSongs(results)
   results.sort((a, b) => (b.views || 0) - (a.views || 0))
   return results.slice(0, 20)
 }
